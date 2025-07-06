@@ -1,9 +1,10 @@
 import {
   Canvg,
   presets,
+  type IParserOptions,
 } from 'canvg'
 
-const preset = presets.offscreen()
+const preset = presets.offscreen() as IParserOptions
 
 export default async ({ width, height, svg }: {
   width: number,
@@ -21,7 +22,7 @@ export default async ({ width, height, svg }: {
     canvas.height = height
     ctx = canvas.getContext('2d')
   }
-  if (canvas == null || ctx == null) { 
+  if (canvas == null || ctx == null) {
     console.error('Browser does not support canvas')
     return
   }

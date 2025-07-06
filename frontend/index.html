@@ -1,15 +1,31 @@
 <!DOCTYPE html>
 <html
-  class="overflow-y-scroll"
+  class="
+    overflow-y-scroll
+    scroll-smooth
+    scroll-pt-16
+    scrollbar-gutter-stable
+    [&:has(dialog[open],#the-main-nav,#the-lang-nav)]:overflow-hidden
+  "
+  dir="ltr"
   lang="en"
 >
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
     <meta name="description" content="Tipping someone with bitcoin has never been so easy. #gentleorangepilling by Satoshi Engineering" />
     <title><%= env.VITE_DEFAULT_DOCUMENT_TITLE %></title>
 
     <link rel="canonical" href="<%= env.VITE_CANONICAL_URL_ORIGIN %>">
+
+    <link rel="alternate" href="<%= env.VITE_CANONICAL_URL_ORIGIN %>" hreflang="x-default">
+    <link rel="alternate" href="<%= env.VITE_CANONICAL_URL_ORIGIN %>/de" hreflang="de">
+    <link rel="alternate" href="<%= env.VITE_CANONICAL_URL_ORIGIN %>/en" hreflang="en">
+    <link rel="alternate" href="<%= env.VITE_CANONICAL_URL_ORIGIN %>/es" hreflang="es">
+    <link rel="alternate" href="<%= env.VITE_CANONICAL_URL_ORIGIN %>/he" hreflang="he">
+    <link rel="alternate" href="<%= env.VITE_CANONICAL_URL_ORIGIN %>/ru" hreflang="ru">
+    <link rel="alternate" href="<%= env.VITE_CANONICAL_URL_ORIGIN %>/hi" hreflang="hi">
+    <link rel="alternate" href="<%= env.VITE_CANONICAL_URL_ORIGIN %>/id" hreflang="id">
 
     <link rel="icon" href="/favicon.ico" sizes="any" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
@@ -28,7 +44,7 @@
             ⚡
           </div>
           <h1 class="text-3xl my-6 first:mt-0 last:mb-0 font-semibold">
-            Lightning Tip Cards
+            Lightning TipCards
           </h1>
           <p>by <a href="https://satoshiengineering.com" target="_blank">Satoshi Engineering</a></p>
         </div>

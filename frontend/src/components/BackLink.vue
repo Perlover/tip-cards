@@ -1,78 +1,47 @@
 <template>
-  <div
-    v-if="!onlyInternalReferrer"
-  >
+  <div>
     <LinkDefault
+      v-bind="$attrs"
       :to="to"
-      target="_self"
-      @click="backlinkAction($event)"
+      :autofocus="autofocus"
+      no-bold
+      @click="$emit('click')"
     >
-      <i class="bi bi-caret-left-fill rtl:hidden" /><!--
-      --><i class="bi bi-caret-right-fill ltr:hidden" /><!--
-      -->{{ t('general.back') }}
+      <span class="flex gap-1 items-center">
+        <IconCaretLeft class="w-3 h-3 rtl:hidden" />
+        <IconCaretRight class="w-3 h-3 ltr:hidden" />
+        <span v-if="$slots.default == null">
+          {{ t('general.back') }}
+        </span>
+        <span v-else>
+          <slot />
+        </span>
+      </span>
     </LinkDefault>
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed, type PropType } from 'vue'
-import { useRouter, useRoute, type RouteLocationRaw } from 'vue-router'
+import type { PropType } from 'vue'
+import type { RouteLocationRaw } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 
-import LinkDefault from './typography/LinkDefault.vue'
+import LinkDefault from '@/components/typography/LinkDefault.vue'
+import IconCaretLeft from '@/components/icons/IconCaretLeft.vue'
+import IconCaretRight from '@/components/icons/IconCaretRight.vue'
 
 const { t } = useI18n()
 
-const props = defineProps({
+defineProps({
   to: {
     type: [String, Object] as PropType<RouteLocationRaw>,
     default: undefined,
   },
-  onlyInternalReferrer: {
+  autofocus: {
     type: Boolean,
     default: false,
   },
 })
 
-const router = useRouter()
-const route = useRoute()
-
-const referrerFromApplication = computed(() => {
-  try {
-    if (new URL(document.referrer).origin === location.origin && document.referrer !== document.location.href) {
-      return true
-    }
-  } catch (error) {
-    return false
-  }
-  return false
-})
-
-const to = computed(() => {
-  if (props.to != null) {
-    return props.to
-  }
-
-  const home = { name: 'home', params: { lang: route.params.lang } }
-  if (!referrerFromApplication.value) {
-    return home
-  }
-  try {
-    return router.resolve(new URL(document.referrer).pathname)
-  } catch (error) {
-    return home
-  }
-})
-
-const backlinkAction = (event: Event) => {
-  if (
-    props.to != null
-    || history.length <= 1
-    || !referrerFromApplication.value
-    ) {
-    return true
-  }
-  event.preventDefault()
-  router.go(-1)
-}
+defineEmits(['click'])
 </script>

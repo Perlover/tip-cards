@@ -1,0 +1,58 @@
+# these variables are only used for the integration test postgres service
+variables:
+  POSTGRES_DB: tipcards
+  POSTGRES_USER: tipcards
+  POSTGRES_PASSWORD: thisisonlyusedinthepipeline
+
+test-backend-integration:
+  services:
+    - name: postgres:16.3
+      alias: postgres
+  stage: integration-and-e2e
+  rules:
+    - !reference [.shared_config, rules, no_tags]
+    - !reference [.shared_config, rules, web_and_push]
+    - when: on_success
+  cache:
+    - !reference [.shared_config, cache, node_modules]
+  variables:
+    NODE_ENV: test
+  script:
+    - cp $BACKEND_ENV_FILE_E2E_TESTS backend/.env.integrationTest
+    - echo "Running database migration to prepare database for backend integration tests"
+    - npm run drizzle-migrate
+    - echo "Running backend integration tests on branch $CI_COMMIT_BRANCH"
+    - sh backend-integration-tests.sh
+
+test-e2e:
+  image: cypress/browsers:node-20.15.1-chrome-126.0.6478.114-1-ff-128.0-edge-126.0.2592.61-1
+  services:
+    - name: postgres:16.3
+      alias: postgres
+  stage: integration-and-e2e
+  rules:
+    - !reference [.shared_config, rules, no_tags]
+    - !reference [.shared_config, rules, web_and_push]
+    - when: on_success
+  cache:
+    - !reference [.shared_config, cache, node_modules]
+  variables:
+    NODE_ENV: test
+  artifacts:
+    name: cypress-e2e
+    when: always
+    paths:
+      - cypress/videos/**/*.mp4
+      - cypress/screenshots/**/*.png
+    expire_in: 1 day
+  before_script:
+    - apt-get update && apt-get install -y xsel # xsel is needed for clipbordly packages 
+  script:
+    - cp $BACKEND_ENV_FILE_E2E_TESTS backend/.env.integrationTest
+    - echo "Running database migration to prepare database for e2e tests"
+    - npm run drizzle-migrate
+    - echo "Installing cypress"
+    - npx cypress install
+    - cp $E2E_ENV_FILE_TESTS e2e/.env.local
+    - echo "Running e2e tests on branch $CI_COMMIT_BRANCH"
+    - sh e2e-tests.sh

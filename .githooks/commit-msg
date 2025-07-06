@@ -1,23 +1,75 @@
-#!/bin/bash
+#!/usr/bin/env node
 
-echo "Checking commit-message format..."
+import fs from 'fs'
 
-## the first arg is the path to the git commit temporary file
-TEMPORARY_FILE_PATH=$1
+import config from './commit-msg-config.json' with { type: 'json' }
 
-## get commit-message from the temporary file
-COMMIT_MSG=`head -n1 $TEMPORARY_FILE_PATH`
+const expectedFormat = `ℹ️  Expected format:
+    
+\x1b[32m<type>(<scope>): <subject>
+<BLANK LINE>
+<body> (optional)
+<BLANK LINE> (required if body is present)
+BREAKING CHANGE: <description> (optional)
+Reviewed-by: <reviewer> (optional)
+Refs: projects#<issue-number> (required)\x1b[0m`
 
-## init regex to match commit-message format
-REGEX="^\[([A-Z]+)\] .+( projects#[0-9]+)+$"
+// Regex to validate the commit message
+const allowedSubjectCharacters = '[\\w .,?:\\/\\-\'()&]' // allowedSubjectCharacters as RegEx string
+const allowedSubjectCharactersAsString = '.,?/-()&\''    // allowedSubjectCharacters as printable string
 
-## checking commit-message format
-if ! [[ $COMMIT_MSG =~ $REGEX ]];then
-    echo -e "Your commit-message format is not valid:\n$COMMIT_MSG\n"
-    echo -e "Valid example:\n[TASK] Example commit msg projects#123"
-    exit 1
-else
-    echo "Commit-message is valid."
-    exit 0
-fi
+const body = '(\\n[\\s\\S]+\\n)?'
+const breakingChangeFooter = '(\\nBREAKING(-| )CHANGE: \\S[ \\S]*\\S)?'
+const reviewedByFooter = '(\\nReviewed-by: \\S[ \\S]*\\S)?'
+const refFooter = '(\\nRefs:( projects#[0-9]+,?)+)'
+const footers = '(\\n[\\s\\S]+)?'
 
+// Path to the commit message file
+const commitMsgFile = process.argv[2]
+
+// Read the commit message from the file
+const commitMsg = fs.readFileSync(commitMsgFile, 'utf-8').trim()
+
+const messageFormatRegex = /^(?<type>\w+)(\((?<scope>\w+)\))?: (?<subject>.+)\n(?<bodyAndFooters>[\s\S]*)$/
+const bodyAndFootersRegex = new RegExp(`^${body}${breakingChangeFooter}${reviewedByFooter}${refFooter}${footers}$`)
+
+// Split the message in to parts
+const messageMatch = commitMsg.match(messageFormatRegex)
+
+if (messageMatch?.groups == null) {
+  console.error(`❌ No regex mach!`)
+  console.info(expectedFormat)
+  process.exit(1)
+}
+
+// Header - Type
+if (!config.types.includes(messageMatch.groups.type)) {
+  console.error(`❌ Invalid type: ${messageMatch.groups.type}`)
+  console.info(`ℹ️  Allowed types: ${config.types.join(', ')}`)
+  process.exit(1)
+}
+
+// Header - Scope (optional)
+if (messageMatch.groups.scope !== undefined && !config.scopes.includes(messageMatch.groups.scope)) {
+  console.error(`❌ Invalid scope: ${messageMatch.groups.scope}`)
+  console.info(`ℹ️  Allowed scopes (optional): ${config.scopes.join(', ')}`)
+  process.exit(1)
+}
+
+// Header - Subject - allowed characters
+const regexAllowedSubjectCharacters = new RegExp(`^${allowedSubjectCharacters}+$`)
+if (!regexAllowedSubjectCharacters.test(messageMatch.groups.subject)) {
+  console.error(`❌ Invalid subject: ${messageMatch.groups.subject}`)
+  console.info(`ℹ️  Subject can contain ${allowedSubjectCharactersAsString} characters`)
+  process.exit(1)
+}
+
+// Body and footers
+if (!bodyAndFootersRegex.test(messageMatch.groups.bodyAndFooters)) {
+  console.error(`❌ Body and/or footers are invalid:\n\n\x1b[31m${messageMatch.groups.bodyAndFooters}\x1b[0m\n\n`)
+  console.info(expectedFormat)
+  process.exit(1)
+}
+
+console.log('✅ Commit message is valid.')
+process.exit(0)

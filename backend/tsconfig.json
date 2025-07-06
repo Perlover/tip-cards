@@ -1,23 +1,21 @@
 {
-  "ts-node": {
-    "files": true
-  },
+  "extends": "./tsconfig.base.json",
   "include": [
-    "./index.ts",
     "./cli.ts",
+    "./drizzle.migrate.ts",
+    "./index.ts",
+    "./shutdown.ts",
+    "./startup.ts",
+    "./ngrok.ts",
+    "./proxy.ts",
     "./src/**/*.ts",
-    "./src/**/*.json"
+    "./tests/**/*.ts",
+    "./src/types/global.d.ts",
   ],
   "compilerOptions": {
-    "target": "es6",
-    "module": "commonjs",
-    "outDir": "./build",
-    "esModuleInterop": true,
-    "strict": true,
-    "resolveJsonModule": true,
-    "typeRoots": [
-      "./node_modules/@types",
-      "./src/types"
-    ]
-  }
+    "types": ["node"]
+  },
+  "references": [
+    { "path" : "../shared/tsconfig.json" }
+  ]
 }

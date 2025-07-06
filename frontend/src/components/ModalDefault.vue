@@ -1,93 +1,80 @@
 <template>
-  <div
-    class="flex justify-center items-center fixed top-0 left-0 right-0 w-full h-full p-4 overflow-x-hidden overflow-y-auto bg-grey bg-opacity-50"
-    @click="onBackdropClick"
-  >
-    <div
-      class="relative w-full h-full max-w-2xl md:h-auto"
-      @click.stop
+  <Teleport to="body">
+    <dialog
+      ref="dialog"
+      class="
+        w-full max-w-full sm:max-w-xl max-h-full sm:max-h-[calc(100dvh-32px)] h-full sm:h-fit bg-white
+        backdrop:bg-opacity-50 backdrop:bg-grey backdrop:overflow-y-auto
+      "
+      data-test="modal"
+      v-bind="$attrs"
+      @click="onDialogClick"
     >
       <!-- Modal content -->
-      <div class="relative bg-white rounded-lg shadow p-4">
-        <div class="flex items-start justify-between mb-4">
-          <slot name="headline">
-            <HeadlineDefault level="h3">
-              {{ headline }}
-            </HeadlineDefault>
-          </slot>
-          <button
-            v-if="showCloseButton"
-            type="button"
-            class="text-grey bg-transparent hover:bg-grey-light hover:text-grey-dark rounded-lg text-sm p-1.5 ml-auto inline-flex items-center"
-            @click="$emit('close')"
+      <div class="py-4">
+        <CenterContainer
+          v-if="!noCloseButton"
+        >
+          <BackLink
+            data-test="modal-close-button"
+            class="!pb-2"
+            @click="dialog?.close()"
           >
-            <svg
-              class="w-5 h-5"
-              fill="currentColor"
-              viewBox="0 0 20 20"
-              xmlns="http://www.w3.org/2000/svg"
-            >
-              <path
-                fill-rule="evenodd"
-                d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
-                clip-rule="evenodd"
-              />
-            </svg>
-          </button>
-        </div>
-        <slot name="default" />
-        <div v-if="$slots.footer != null" class="flex items-start mt-4">
-          <slot name="footer" />
-        </div>
+            {{ closeButtonText || $t('general.close') }}
+          </BackLink>
+        </CenterContainer>
+        <CenterContainer data-test="modal-content">
+          <slot name="default" />
+        </CenterContainer>
       </div>
-    </div>
-  </div>
+    </dialog>
+  </Teleport>
 </template>
 
 <script lang="ts" setup>
-import { onBeforeMount, onBeforeUnmount } from 'vue'
+import { nextTick, onBeforeMount, onBeforeUnmount, ref } from 'vue'
 
-import HeadlineDefault from '@/components/typography/HeadlineDefault.vue'
+import BackLink from './BackLink.vue'
+import CenterContainer from './layout/CenterContainer.vue'
 
 const props = defineProps({
-  headline: {
+  noCloseButton: {
+    type: Boolean,
+    default: false,
+  },
+  closeButtonText: {
     type: String,
-    default: 'Headline Modal',
+    default: undefined,
   },
-  showCloseButton: {
+  noCloseOnBackdropClick: {
     type: Boolean,
-    default: true,
-  },
-  closeOnBackdropClick: {
-    type: Boolean,
-    default: true,
-  },
-  closeOnEsc: {
-    type: Boolean,
-    default: true,
+    default: false,
   },
 })
 
 const emit = defineEmits(['close'])
 
-const onBackdropClick = () => {
-  if (!props.closeOnBackdropClick) {
-    return
-  }
+const dialog = ref<HTMLDialogElement | null>(null)
+
+const onCloseEvent = () => {
   emit('close')
 }
 
-/////
-// close on escape
-const onKeyDown = (event: KeyboardEvent) => {
-  if (props.closeOnEsc && event.key === 'Escape') {
-    emit('close')
+const onDialogClick = (event: MouseEvent) => {
+  if (props.noCloseOnBackdropClick) {
+    return
+  }
+  if (event.target === dialog.value) {
+    dialog.value?.close()
   }
 }
-onBeforeMount(() => {
-  document.addEventListener('keydown', onKeyDown)
+
+onBeforeMount(async () => {
+  await nextTick()
+  dialog.value?.showModal()
+  dialog.value?.addEventListener('close', onCloseEvent)
 })
 onBeforeUnmount(() => {
-  document.removeEventListener('keydown', onKeyDown)
+  dialog.value?.removeEventListener('close', onCloseEvent)
 })
 </script>

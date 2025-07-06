@@ -1,21 +1,136 @@
 {
   "general": {
     "back": "Back",
-    "cards": "{count} card | {count} cards"
+    "cards": "{count} card | {count} cards",
+    "sets": "{count} set | {count} sets",
+    "userAccount": "Account",
+    "login": "Login",
+    "logout": "Logout",
+    "close": "Close",
+    "getStarted": "Get started",
+    "cancel": "Cancel",
+    "status": "Status",
+    "search": "Search",
+    "amountAndUnitBitcoin": "{amount} Bitcoin",
+    "amountAndUnitBtc": "{amount} BTC",
+    "amountAndUnitSats": "{amount} sat | {amount} sats",
+    "noItems": "No entries available.",
+    "amount": "Amount",
+    "set": "Set",
+    "loadMore": "Load more",
+    "fee": "Fee",
+    "totalIncludingFee": "Total incl. fee",
+    "details": "Details"
+  },
+  "cardsSummary": {
+    "total": "Total",
+    "unfunded": "Unfunded",
+    "funded": "Funded",
+    "withdrawn": "Redeemed",
+    "userActionRequired": "Open tasks"
+  },
+  "cardStatus": {
+    "unfunded": "Unfunded",
+    "invoiceFunding": "Waiting for payment",
+    "lnurlpFunding": "Waiting for payment",
+    "lnurlpSharedFunding": "Shared funding in progress",
+    "setInvoiceFunding": "Waiting for payment",
+    "invoiceExpired": "Invoice expired",
+    "lnurlpExpired": "Payment link expired",
+    "lnurlpSharedExpiredEmpty": "Shared funding expired",
+    "lnurlpSharedExpiredFunded": "Shared funding expired",
+    "setInvoiceExpired": "Set invoice expired",
+    "funded": "Funded",
+    "isLockedByBulkWithdraw": "Reclaim in progress",
+    "bulkWithdrawPending": "Reclaim in progress",
+    "withdrawnByBulkWithdraw": "Reclaimed",
+    "withdrawPending": "Withdraw in progress",
+    "recentlyWithdrawn": "Recently redeemed",
+    "withdrawn": "Redeemed",
+    "landingPageViewed": "Viewed",
+    "created": "Created",
+    "bulkWithdrawCreated": "Reclaim started"
+  },
+  "cardStatusList": {
+    "loginToSeeYourCards": "{loginLink} to see a list of your TipCards and their status.",
+    "loginToSeeYourCardsLoginLink": "Log in"
+  },
+  "header": {
+    "mainNavLabel": "Main navigation",
+    "langNavLabel": "Language selection",
+    "loginBanner": {
+      "claim": "{login} to save your TipCards sets, check the status and retrieve your sats.",
+      "login": "Log in"
+    }
   },
   "nav": {
     "index": "Home",
-    "cards": "Create",
-    "preview": "Landing page",
-    "about": "About"
+    "cards": "Create a set",
+    "dashboard": "Dashboard",
+    "history": "History",
+    "landing": "Landing page",
+    "about": "About",
+    "privacyPolicy": "Privacy Policy",
+    "legalNotice": "Legal Notice",
+    "goToAccount": "to your account",
+    "sets": "My Sets",
+    "faqs": "FAQ",
+    "statistics": "Statistiken"
   },
   "footer": {
-    "support": "Any questions or feedback? Or did you find a problem or bug? Don't hesitate to contact us: {email}."
+    "mostRelevantFaqs": {
+      "title": "Bug, feedback or questions?",
+      "subTitle": "We are constantly striving to improve!",
+      "buttonToFaqs": "To the FAQs"
+    }
+  },
+  "faqs": {
+    "title": "Frequently Asked Questions",
+    "intro": "Here you will find answers to the most frequently asked questions. We are constantly striving to improve!",
+    "questions": {
+      "support": {
+        "question": "I have questions, feedback, a problem or found a bug. What should I do?",
+        "answer": "Don't hesitate to contact us at {supportEmail}."
+      },
+      "setId": {
+        "question": "What was the Set ID for again?",
+        "answer": "The Set ID allows you to check the status of your funded and gifted TipCards at the URL https://tipcards.io/cards/<Set-ID>. If a card hasn't been redeemed after a while, you can get back the Sats there. If you've logged in with LNURL-Auth and created a user account, you can save your sets—so you don't have to remember your Set IDs manually."
+      },
+      "monitorCards": {
+        "question": "How can I track which cards have been redeemed?",
+        "answer": "Go to the page where you created your TipCards set (https://tipcards.io/cards/<Set-ID>). In the upper part you will see an overview of all cards in your set that have been funded, viewed and redeemed."
+      },
+      "getBackSats": {
+        "question": "How can I get unused sats back?",
+        "answer": "On the page of your TipCards set, you will find a button \"Withdraw remaining sats\". It will allow you to redeem all cards of this set that still have some value on them at once. You need to be logged in to use this feature."
+      },
+      "bulkFunding": {
+        "question": "Can I fund multiple cards at once?",
+        "answer": "Just click on \"Fund set\" on the set's configuration page and type in the amount of sats per card. You can fund up to 100 cards with one lightning transaction."
+      },
+      "custodial": {
+        "question": "Is TipCards a custodial service?",
+        "answer": "Lightning TipCards is a custodial service and should not be used as a long-term storage for your sats. We highly recommend not to leave a significant amount on a TipCard for a longer time."
+      },
+      "lightningNode": {
+        "question": "Which Lightning node are you using?",
+        "answer": "We are using the Lightning node {lightningNode}."
+      },
+      "openSource": {
+        "question": "Can I host TipCards myself? Is the code open source?",
+        "answer": "Yes. You are free to setup your own version of Lightning TipCards or to support us by creating issues, contributing translations, bug fixes or new features via Pull Requests on {github}."
+      },
+      "localStorageSets": {
+        "question": "Where are my old sets?",
+        "answer": "If you saved sets before September 2023, they were stored locally in your browser. You can go to {localSetsPage} to view them. We would recommend you to save them into your account, so that you can get access to them from any device."
+      }
+    }
   },
   "landing": {
     "title": "Get your bitcoin",
-    "titlePreview": "Preview – Get your bitcoin",
-    "introGreeting": "Hey!",
+    "introGreeting": "Hi!",
+    "introGreetingFunded": "Congratulations!",
+    "introMessage": "You have been gifted with Bitcoin.{linebreak}Get them now!",
     "introMessageReceiveBtc": {
       "message": "You are just about to receive {amountAndUnit}",
       "amountAndUnit": "{amount} bitcoin",
@@ -24,7 +139,7 @@
       "footnote": "via Lightning"
     },
     "introMessagePreview": {
-      "headline": "Scan a Lightning Tip Card to receive some bitcoin.",
+      "headline": "Scan a Lightning TipCard to receive some bitcoin.",
       "message": "You can also get bitcoin at a Crypto exchange (e.g. {exchange}) at a Bitcoin ATM (e.g. {atm}) or from a Crypto broker (e.g. {broker}) etc."
     },
     "introMessageAlreadyUsed": {
@@ -36,11 +151,19 @@
       "message": "You can get more bitcoin at a Crypto exchange (e.g. {exchange}) at a Bitcoin ATM (e.g. {atm}) or from a Crypto broker (e.g. {broker}) etc."
     },
     "sectionBitcoin": {
+      "title": "What exactly is Bitcoin?",
       "paragraphs": {
         "0": "Bitcoin is a <strong>digital currency</strong>.",
         "1": "It is being managed by all members of the bitcoin network, which means it is <strong>not under control</strong> of any central bank, government, or company.",
         "2": "Transactions (including international ones) are as easy as scanning a QR code. Just give it a try!"
-      }
+      },
+      "headline": "What is Bitcoin?"
+    },
+    "sectionGetYourBitcoin": {
+      "headline": "How to get your Bitcoin",
+      "explanation": "If you have a Lightning wallet installed, <strong>scan</strong> the QR code on your <strong>TipCard again</strong> with your wallet or <strong>press</strong> the following QR code:",
+      "qrCodeHeadline": "Press the Qr code below",
+      "noWallet": "No Lightning wallet yet?"
     },
     "sectionWallet": {
       "headline": "Download a wallet",
@@ -62,62 +185,82 @@
         "message": "The bitcoin were just transferred to your wallet."
       }
     },
+    "sectionNoWallet": {
+      "headline": "New here without a wallet?",
+      "explanation": "Install a wallet to receive, store and spend Bitcoin. A smartphone app is ideal for everyday use and small amounts. We recommend the following wallets to get started:"
+    },
     "sectionUse": {
       "headline": "Use your bitcoin",
-      "message": "You can now spend your bitcoin at a store or on a website that accepts bitcoin, transfer them to your friend's or colleague's Lightning wallet, or just hodl* them.",
-      "messageFootnote": "* to hodl = to hold, to save up",
+      "message": "You can now spend your bitcoin at a store or on a website that accepts bitcoin, transfer them to your friend's or colleague's Lightning wallet, or just hodl (to hodl = to hold, to save up) them.",
       "examplesIntro": "Here are a few websites where you can pay with bitcoin via Lightning:",
       "examples": {
         "saltNDaisy": "Buy some sustainable granola",
-        "satoshistore": "Shop Bitcoin Outfits",
+        "satoshistore": "Bitcoin merchandise store",
         "aprycotMedia": "Bitcoin books, media and more",
-        "copiaro": "Hardware Wallets & HODL tools",
+        "copiaro": "Hardware wallets & HODL tools",
         "lightningnetworkstores": "Find out what else you could do online",
-        "coinpages": "Find stores that accept bitcoin"
+        "coinpages": "Find stores that accept bitcoin",
+        "btcmap": "Easily find places to spend sats anywhere on the planet"
       },
-      "createYourOwnTipCardsHeadline": "Create your own Tip Cards",
-      "createYourOwnTipCardsText": "Would you like to give your friends or colleagues a few Sats (1 Sat = 0.00000001 Bitcoin) or tip someone in Bitcoin? Click on the following button and configure your personal Tip Cards.",
-      "createYourOwnTipCardsButton": "Create my own Tip Cards"
+      "createYourOwnTipCardsHeadline": "Create your own TipCards",
+      "createYourOwnTipCardsText": "Would you like to give your friends or colleagues a few Sats (1 Sat = 0.00000001 Bitcoin) or tip someone in Bitcoin? Click on the following button and configure your personal TipCards.",
+      "createYourOwnTipCardsButton": "Create my own TipCards"
     },
+    "bulkWithdrawExists": "A recall of this TipCard is currently in progress. You have to cancel it first to use the card.",
+    "bulkWithdrawPending": "The sats from this TipCard are being retrieved. If this takes more than a few minutes, please contact support.",
+    "bulkWithdrawResetError": "An error occurred when cancelling the recall.",
     "errors": {
-      "errorInvalidLnurl": "It seems the LNURL is not from a valid Tip Card.",
+      "errorInvalidLnurl": "It seems the LNURL is not from a valid TipCard.",
+      "errorLoadingCardStatus": "Unable to load card status.",
       "errorInvalidLandingPage": "Unable to load custom landing page."
     }
   },
   "funding": {
-    "title": "Fund your Tip Card",
-    "headline": "Fund this Tip Card",
-    "headlineFunded": "Tip Card has been funded",
-    "headlineUsed": "Tip Card successfully redeemed",
-    "headlineSetFunding": "Tip Card Funding",
+    "title": "Fund your TipCard",
+    "headline": "Fund this TipCard",
+    "headlineFunded": "TipCard has been funded",
+    "headlineUsed": "TipCard successfully redeemed",
+    "headlineSetFunding": "TipCard Funding",
     "text": "This tip card has not been funded with sats yet. Specify the amount and the message you want the recipient to see in their wallet.",
-    "textFunded": "This Tip Card is already funded with ({amountAndUnit}) and can be given to somebody who is in need of some orange pilling.",
+    "textFunded": "This TipCard is already funded with ({amountAndUnit}) and can be given to somebody who is in need of some orange pilling.",
     "textUsed": "This card was funded with {amountAndUnit} and has been redeemed.",
     "textSetFunding": "This card will be funded as soon as the invoice of the set is paid. Please come back later.",
     "amountAndUnit": "{amount} BTC",
     "form": {
       "textHint": "Will be displayed in the recipient's wallet",
       "notePlaceholder": "Notes / handed out to",
-      "noteHint": "Will be displayed on the status section of your Tip Cards set",
-      "button": "Fund card"
+      "noteHint": "Will be displayed on the status section of your TipCards set",
+      "button": "Fund card",
+      "labelText": "Message",
+      "textPlaceholder": "Message in the recipient's wallet",
+      "feeInfo": "The {fee}% fee covers the costs of outbound routing and infrastructure. It is rounded up to whole sats per card, resulting in a minimum of {minimumFeeAmountAndUnit} per card.",
+      "feeInfoShared": "The {fee}% fee covers the costs of outbound routing and infrastructure. It is rounded up to whole sats per payment, resulting in a minimum of {minimumFeeAmountAndUnit} per payment."
     },
-    "invoiceText": "Fund your Tip Card with {amount} sats:",
-    "invoiceExpired": "The lightning invoice for this card has expired. Please reset the Tip Card to continue.",
-    "resetInvoice": "Reset Tip Card",
+    "invoiceText": "Fund your TipCard with {amount} sats:",
+    "invoiceExpired": "The lightning invoice for this card has expired. Please reset the TipCard to continue.",
+    "resetInvoice": "Reset TipCard",
     "resetDisabledTooltip": "This card is already funded with sats.",
     "lnurlp": {
-      "text": "Scan the QR code with your wallet app or click {buttonOpenInWallet} to fund the card. You can enter the desired amount in the wallet app."
+      "currentAmount": "The TipCard has been funded with:",
+      "text": "Scan the QR code with your wallet app or click {buttonOpenInWallet} to fund the card. You can enter the desired amount in the wallet app.",
+      "fundedAmount": "Paid amount",
+      "amountOnCard": "Amount on the card"
     },
-    "lnurlpExpired": "Unfortunately the payment link for this Tip Card expired. Reset the card to continue.",
-    "lnurlpFundedExpired": "Unfortunately the payment link for this Tip Card expired. Complete the funding to continue.",
+    "lnurlpExpired": "Unfortunately the payment link for this TipCard expired. Reset the card to continue.",
+    "lnurlpFundedExpired": "Unfortunately the payment link for this TipCard expired. Complete the funding to continue.",
     "shared": {
       "text": "Scan and pay the QR Code as many times as you want and {buttonFinish} as soon as you're done.",
-      "textEmpty": "This Tip Card is still empty. As soon as there are some Sats on it you can complete the card.",
-      "textPartiallyFunded": "This Tip Card is already funded with {amountAndUnit}. As soon as you complete the funding the Bitcoin can be withdrawn.",
+      "textEmpty": "This TipCard is still empty. As soon as there are some Sats on it you can complete the card.",
+      "textPartiallyFunded": "This TipCard is already funded with {amountAndUnit}. As soon as you complete the funding the Bitcoin can be withdrawn.",
       "buttonFinish": "Complete Funding",
       "finishDisabledTooltip": "You need to fund this card first.",
-      "buttonMakeShared": "Activate shared funding on this Tip Card"
-    }
+      "buttonMakeShared": "Activate shared funding on this TipCard",
+      "currentAmount": "The current balance on the card is:",
+      "fundedAmount": "Total of the paid amounts",
+      "amountOnCard": "Amount on the card",
+      "paymentsCount": "Number of payments"
+    },
+    "payInvoice": "Please pay the following amount:"
   },
   "setFunding": {
     "title": "Set funding",
@@ -134,20 +277,23 @@
       "totalAmountLabel": "Total amount",
       "textHint": "Will be displayed in the recipient's wallet",
       "notePlaceholder": "Notes / handed out to",
-      "noteHint": "Will be displayed on the status section of your Tip Cards set",
+      "noteHint": "Will be displayed on the status section of your TipCards set",
       "landingPagesHeadline": "Landing Page",
       "landingPagesHint": "This page will be shown when the QR code of a funded card is scanned.",
       "button": "Fund set"
     },
     "resetInvoice": "Reset Set Invoice",
     "resetDisabledTooltip": "This set has already been funded",
-    "backToSet": "Back to the cards"
+    "backToSet": "Back to the cards",
+    "invoiceExpired": "The lightning invoice for this set has expired. Please reset it to continue.",
+    "payInvoice": "Pay the following amount to fund {cards}:",
+    "invoicePaidSuccessfully": "{cards} have been funded successfully."
   },
   "index": {
     "buttonLogin": "Login using LNURL-Auth",
-    "buttonCreate": "Create your Tip Cards set ⚡",
-    "savedCardsSetsHeadline": "Saved Tip Cards sets",
-    "noSavedCardsSetsMessage": "No saved Tip Cards sets found in this browser",
+    "buttonCreate": "Create your TipCards set ⚡",
+    "savedCardsSetsHeadline": "Saved TipCards sets",
+    "noSavedCardsSetsMessage": "You do not have any saved sets yet",
     "unnamedSetNameFallback": "Unnamed set",
     "youtube": {
       "create": {
@@ -160,19 +306,84 @@
       }
     }
   },
+  "home": {
+    "headline": "The easiest way to tip with Bitcoin",
+    "intro": "Simply print out TipCards, top up Sats and make someone happy.",
+    "buttonCreate": "Create your TipCards set",
+    "buttonDashboard": "View Dashboard",
+    "quote": "It's easy to stick to old habits. But breaking old patterns {em}",
+    "quoteEm": "pays off.",
+    "howItWorksHeadline": "How it works",
+    "howItWorksSlides": {
+      "create": {
+        "headline": "Create",
+        "text": "Create a TipCards set with one or more TipCards. You can configure them as you like."
+      },
+      "print": {
+        "headline": "Print",
+        "text": "Print out the TipCards and cut them out."
+      },
+      "fund": {
+        "headline": "Fund the cards",
+        "text": "Top up the TipCards with Bitcoin."
+      },
+      "give": {
+        "headline": "Give away",
+        "text": "Give away the TipCards and make someone happy."
+      }
+    },
+    "videoGuidesHeadline": "Video guides",
+    "videoGuidesText": "You received a TipCard or want to create one yourself? In our video guides we show you how it works.",
+    "videoGuidesSlides": {
+      "create": {
+        "headline": "Create",
+        "text": "How to configure your TipCards, print and cut them.",
+        "link": "https://www.youtube.com/watch?v=Oq__BT6oVoM"
+      },
+      "use": {
+        "headline": "Use",
+        "text": "How to fund and redeem the TipCards.",
+        "link": "https://www.youtube.com/watch?v=26dj0580HYc"
+      }
+    },
+    "seoTextHeadline": "Give Bitcoin, Simply.",
+    "seoText": "<p><strong>Lightning TipCards</strong> are the easiest way to give <strong>bitcoin</strong> in the real world. Each <strong>card</strong> can be loaded with bitcoin via the Lightning Network and then redeemed instantly—no technical knowledge needed.</p><p>Whether you're introducing someone to bitcoin, giving a memorable <strong>gift</strong>, or sharing value at an <strong>event</strong>, TipCards make it simple and fun. Just scan, redeem, and enjoy.</p><p><strong>Perfect for:</strong></p><ul><li>Birthdays, holidays, and special occasions</li><li>Conferences, meetups, <strong>onboarding</strong>, and <strong>orange pilling</strong></li><li>Any <strong>event</strong> where you want to share Bitcoin</li><li>Anyone curious about Bitcoin</li></ul><p>A <strong>gift card</strong> for the future—powered by Lightning.</p><p><strong>Start gifting bitcoin today at TipCards.io.</strong></p>"
+  },
+  "sets": {
+    "title": "All my sets",
+    "backLink": "Back to home",
+    "newSet": "New set",
+    "description": "Here you can see all your saved TipCards sets.",
+    "loginToSeeYourSets": "{loginLink} to see your saved TipCards sets.",
+    "loginToSeeYourSetsLoginLink": "Log in",
+    "noSavedCardsSetsMessage": "You do not have any saved sets yet.",
+    "unnamedSetNameFallback": "Untitled set",
+    "setInfo": "Set info",
+    "noSetsMatchingFilter": "No sets found.",
+    "displayedSetsOfTotalSets": "{displayedSets} / {totalSets} set | {displayedSets} / {totalSets} sets"
+  },
+  "set": {
+    "title": "Set",
+    "errors": {
+      "unableToLoadSetFromBackend": "Unable to load set from the server."
+    }
+  },
   "cards": {
-    "title": "Tip Cards Set",
+    "title": "TipCards Set",
     "status": {
       "headline": "Status",
-      "noCards": "No cards have been funded yet. You will find the status of all cards from this set here after funding your first Tip Card.",
+      "noCards": "No cards have been funded yet. You will find the status of all cards from this set here after funding your first TipCard.",
       "labelUsed": "Redeemed",
+      "labelBulkWithdrawn": "Redrawn",
       "labelFunded": "Funded",
       "labelPendingFunding": "Waiting to be paid",
       "labelPendingSharedFunding": "Shared funding in progress",
       "labelPendingSetFunding": "Set funding in progress",
+      "labelIsLockedByBulkWithdraw": "Withdraw in progress",
       "labelNote": "Note",
       "labelViewed": "Viewed by recipient",
-      "reload": "Reload"
+      "reload": "Reload",
+      "labelUnused": "Not funded"
     },
     "settings": {
       "headline": "Configuration",
@@ -192,25 +403,33 @@
     "actions": {
       "headline": "Actions",
       "printHeadline": "Print",
-      "buttonPrint": "Print Tip Cards",
+      "buttonPrint": "Print TipCards",
       "buttonDownloadPngs": "Download PNGs",
       "setName": "Set name",
-      "buttonSaveCardsSet": "Save Tip Cards set",
+      "buttonSaveCardsSet": "Save TipCards set",
+      "buttonSaveDisabledTooltip": "You can only save sets when you are logged in. Alternatively you can use the URL to access this set.",
       "buttonDeleteCardsSet": "Delete saved set",
       "saveHeadline": "Save",
-      "saveSetConfirm": "The current Tip Cards set will be saved locally in this browser, using localStorage.\n\nYou can also use the URL (from the address bar) to access this Tip Cards set.\n\nContinue?",
-      "deleteSetConfirm": "Do you really want to delete the current Tip Cards set and its settings from this browser?",
-      "deleteSetOnServerConfirm": "Do you really want to delete the current Tip Cards set from the server?",
+      "saveSetConfirm": "The current TipCards set will be saved locally in this browser, using localStorage.\n\nYou can also use the URL (from the address bar) to access this TipCards set.\n\nContinue?",
+      "deleteSetConfirm": "Do you really want to delete the current TipCards set and its settings from this browser?",
+      "deleteSetOnServerConfirm": "Do you really want to delete the current TipCards set from the server?",
       "setFunding": {
         "headline": "Fund all cards",
-        "intro": "You can fund a single Tip Card by scanning the QR code of a new card. If you want to fund all cards of this set at once, use the \"Set funding\" feature.",
+        "intro": "You can fund single TipCards by scanning the QR code of a new card. If you want to fund all cards of this set at once, use the \"Set funding\" feature.",
         "label": "Fund all cards at once",
         "button": "Fund set",
         "disabledReason": "Some cards of this set have already been used. Create a new set to fund a whole set."
+      },
+      "bulkWithdraw": {
+        "headline": "Get back all unused Satoshis",
+        "intro": "If you want to withdraw all remaining sats from the whole set at once, click on \"Withdraw remaining sats\".",
+        "label": "Withdraw all Satoshis at once",
+        "button": "Withdraw remaining sats",
+        "disabledReason": "There are no funded cards in this set."
       }
     },
     "cards": {
-      "headline": "Tip Cards",
+      "headline": "TipCards",
       "filterLabel": "Display cards:",
       "filter": {
         "all": "All",
@@ -222,7 +441,28 @@
     "errors": {
       "unableToSaveSet": "Unable to save set on server.",
       "unableToDeleteSet": "Unable to delete set from server."
-    }
+    },
+    "cardInfo": "Card info"
+  },
+  "userAccount": {
+    "title": "Your Account",
+    "profileFormHeadline": "Your data",
+    "form": {
+      "accountName": "Account name",
+      "accountNameHint": "Internal account name, if you use multiple accounts/lightning nodes.",
+      "displayName": "Display name",
+      "displayNameHint": "For future features. Use only if you want to show your name to other TipCards users.",
+      "emailAddress": "Email address",
+      "emailAddressHint": "In case you lose your lightning wallet or device that you used to authenticate.",
+      "save": "Save"
+    },
+    "logoutAllOtherDevicesHint": "It can take up to 5 minutes until this affects your other devices.",
+    "errors": {
+      "unableToFetchProfile": "Error while loading profile data. Please retry or check your internet connection.",
+      "unableToSaveProfile": "Error while saving profile data. Please retry or check your internet connection.",
+      "unableToLogoutAllOtherDevices": "Error while logging out all other devices. Please retry or check your internet connection"
+    },
+    "completeProfile": "Complete your profile"
   },
   "lightningQrCode": {
     "buttonOpenInWallet": "Open in wallet",
@@ -243,12 +483,22 @@
   },
   "auth": {
     "modalLogin": {
-      "headline": "Login using LNURL-Auth",
-      "text": "Login and enjoy some cool features! You need a lightning app that supports LNURL-Auth.",
+      "headline": "Nice to meet you!",
+      "qrCodeHeadline": "Login using LNURL-Auth",
+      "text": "Just scan the QR code with your Lightning wallet app and get started. You need a wallet that supports LNURL-Auth.",
       "loginErrorText": "Something went wrong. Please try again later or contact support.",
-      "cookieWarning": "Your logged in state will be stored as a cookie until you log out."
+      "cookieWarning": "Your logged in state will be stored as a cookie until you log out.",
+      "emailHint": "For the case you lose your Lightning wallet or device that you used to authenticate, you can store your email address.",
+      "emailCta": "Enter email address on account page",
+      "close": "Close"
     },
-    "buttonLogout": "Logout"
+    "buttonLogout": "Logout",
+    "buttonLogoutAllOtherDevices": "Logout all other devices",
+    "errors": {
+      "refreshTokenExpired": "Your login expired. This happens when you are inactive for more than 28 days.",
+      "refreshTokenDenied": "You logged out on another device.",
+      "refreshTokenDefaultError": "You were logged out."
+    }
   },
   "stores": {
     "cardsSets": {
@@ -256,17 +506,194 @@
         "unableToLoadSetsFromBackend": "Unable to load sets from the server.",
         "unableToMigrateSets": "Migration failed. You can delete the sets manually and save them when logged in.",
         "setBelongsToAnotherUser": "Unable to save an unnamed set, as it was already saved by another user.",
-        "namedSetBelongsToAnotherUser": "Unable to save {name}, as it was already saved by another user."
+        "namedSetBelongsToAnotherUser": "Unable to save {name}, as it was already saved by another user.",
+        "unableToLoadSetStatisticsFromBackend": "Unable to load set status from the server."
+      }
+    },
+    "profile": {
+      "errors": {
+        "unableToLoadFromBackend": "Unable to load account data from the server.",
+        "unableToSaveToBackend": "Unable to save account data to the server."
+      }
+    },
+    "history": {
+      "errors": {
+        "unableToLoadHistoryFromBackend": "Unable to load history from the server."
       }
     }
   },
   "components": {
     "modalResolveLocalStorage": {
-      "headline": "Sets stored in your browser (LocalStorage)",
-      "text": "You have sets stored locally. To use the LNURL-Auth feature we need to move those to the server. You can do so by clicking \"Migrate\". Alternatively you can log out again and delete them manually first.",
-      "migrate": "Migrate",
+      "headline": "Transfer TipCards sets",
+      "text": "Your TipCards sets are currently stored locally in your browser. Transfer them to your account to access them from all your devices.",
+      "migrate": "Transfer sets",
       "logout": "Logout",
-      "confirmMigrate": "Migrate now?"
+      "confirmMigrate": "Transfer now?"
+    }
+  },
+  "localStorageDeprecation": {
+    "loginCta": "{loginCtaAction} to permanently save your sets.",
+    "loginCtaAction": "Log in",
+    "message": "⚠️ You have TipCards sets stored locally in your browser. Transfer them to your account to access them from all your devices.",
+    "buttonToLocalStorageSetsPage": "To the local sets page",
+    "setsPage": {
+      "headline": "Local TipCards sets",
+      "text": "Your TipCards sets are currently stored locally in your browser. Transfer them to your account to access them from all your devices.",
+      "explanation": "Click on the set name to open the set. When logged in, you can save it. Alternatively, you can bookmark the set links.",
+      "noSets": "You do not have any saved sets yet.",
+      "buttonClearAll": "Delete all local sets",
+      "confirmClearAll": "Do you really want to delete all local sets? This action cannot be undone.",
+      "buttonBack": "Back"
+    }
+  },
+  "bulkWithdraw": {
+    "title": "Withdraw remaining sats",
+    "headline": "Withdraw sats",
+    "setName": "Set name: {setName}",
+    "amountAndUnit": "{amount} BTC",
+    "withdrawExists": "Retrieval of the remaining sats has already been started. You must cancel and restart to display a new QR code.",
+    "withdrawPending": "The retrieval of the remaining sats has already been started. Wait until they have arrived in your lightning wallet. If this takes more than a few minutes, please contact support.",
+    "buttonReset": "Reset",
+    "buttonRestart": "Restart",
+    "noFundedCards": "There are no funded TipCards in this set.",
+    "description": "Scan the QR code to get back all unused sats from the displayed TipCards.",
+    "buttonCreate": "Withdraw all sats",
+    "genericErrorMessage": "An error occurred.",
+    "reload": "Reload"
+  },
+  "about": {
+    "title": "About Lightning TipCards",
+    "intro": "Lightning TipCards are a system for tip or gift cards. You can fund the cards with Bitcoin via the Lightning Network, and the recipient can then redeem them. The recipient receives a brief introduction to Bitcoin and a recommendation for a Lightning app to start their journey into the Bitcoin rabbit hole.",
+    "openSource": {
+      "title": "Open Source",
+      "text": "You are free to setup your own version of Lightning TipCards or to support us by creating issues, contributing translations, bug fixes or new features via Pull Requests on Github.",
+      "githubLinkTitle": "Lightning TipCards on GitHub"
+    },
+    "terms": {
+      "title": "Terms of service",
+      "text": {
+        "1": "By accessing this service, you agree to the following Terms of Service:",
+        "2": "This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE."
+      },
+      "licenseLinkTitle": "Full license terms"
+    },
+    "custodialService": {
+      "title": "Custodial service",
+      "text": {
+        "1": "Please note that Lightning TipCards is a custodial service and should not be used as a long-term storage for your sats. We highly recommend NOT to leave a significant amount on a TipCard for a longer time.",
+        "2": "In the unlikely case we ever need to take down our service, we will keep your sats available to withdraw for another 6 months and afterwards donate the remaining to one or more organizations of our choice.",
+        "3": "If you want to use TipCards using your own Lightning node, you can use our open source code and set up your own instance of Lightning TipCards."
+      }
+    }
+  },
+  "dashboard": {
+    "title": "Dashboard",
+    "welcome": "Nice to meet you!",
+    "allMySets": "All my sets",
+    "errors": {
+      "unableToLoadCardsSummaryFromBackend": "Cards summary could not be loaded."
+    },
+    "fullHistory": "Full history",
+    "openTasks": {
+      "cardCount": "{count} card with open tasks | {count} cards with open tasks",
+      "title": "Open tasks",
+      "headerPrimary": "Task",
+      "errors": {
+        "unableToLoadOpenTasksFromBackend": "Unable to load open tasks."
+      }
+    }
+  },
+  "history": {
+    "title": "History",
+    "cardInfo": "Card info"
+  },
+  "notFound": {
+    "title": "Page not found",
+    "description": "It seems you've discovered a missing link. Don't worry, you can go back to the homepage or use the menu to get back on track.",
+    "subtitle": "Oops, we couldn't find that page.",
+    "backToHome": "Back to the homepage"
+  },
+  "privacyPolicy": {
+    "title": "Privacy Policy",
+    "section1": {
+      "title": "1. Responsible Party",
+      "description": "The responsible party for data processing is:"
+    },
+    "section2": {
+      "title": "2. Data Processing When Using the Platform",
+      "subsection1": {
+        "title": "2.1 Access to the Platform",
+        "item1": "IP address",
+        "item2": "Date and time of access",
+        "item3": "Browser type and version used",
+        "item4": "Operating system",
+        "item5": "Referrer URL (previously visited page)",
+        "description": "These data are processed exclusively for technical purposes and to ensure the stability and security of the platform."
+      },
+      "subsection2": {
+        "title": "2.2 Registration and Login",
+        "item1": "Account name (freely selectable username)",
+        "item2": "Display name (optional, e.g., a publicly visible name)",
+        "item3": "Email address (optional, for communication and password recovery)",
+        "description": "Registration is required to use certain features of the platform. Login is facilitated through LNURL-auth."
+      }
+    },
+    "section3": {
+      "title": "3. Purpose and Legal Basis of Processing",
+      "subsection1": {
+        "title": "The collected data are processed for the following purposes:",
+        "item1": "Providing and managing your user account",
+        "item2": "Ensuring platform functionality",
+        "item3": "Improving user experience",
+        "item4": "Fulfilling legal obligations"
+      },
+      "legalBasis": "Art. 6(1)(a) GDPR (consent), Art. 6(1)(b) GDPR (contract performance), Art. 6(1)(c) GDPR (legal obligation), Art. 6(1)(f) GDPR (legitimate interest)"
+    },
+    "section4": {
+      "title": "4. Data Disclosure",
+      "description": "Your personal data will only be disclosed to third parties if necessary for providing the platform, you have expressly consented, or we are legally required to do so."
+    },
+    "section5": {
+      "title": "5. Data Retention Period",
+      "description": "Personal data is only stored as long as necessary for the stated purposes or as required by legal retention periods. After these periods expire, the data will be deleted."
+    },
+    "section6": {
+      "title": "6. Your Rights",
+      "item1": "The right to request information about your processed personal data (Art. 15 GDPR).",
+      "item2": "The right to have incorrect data corrected (Art. 16 GDPR).",
+      "item3": "The right to request the deletion of your data (Art. 17 GDPR).",
+      "item4": "The right to restrict data processing (Art. 18 GDPR).",
+      "item5": "The right to object to processing (Art. 21 GDPR).",
+      "item6": "The right to data portability (Art. 20 GDPR).",
+      "description": "To exercise your rights, please contact us using the contact details provided above."
+    },
+    "section7": {
+      "title": "7. Cookies and Analytics Tools",
+      "subsection1": {
+        "title": "7.1 What Are Cookies?",
+        "description": "Cookies are small text files stored on your device when you visit our website. They contain information that allows your browser to be recognized and ensures certain functionalities of the website."
+      },
+      "subsection2": {
+        "title": "7.2 Types of Cookies",
+        "item1": "Necessary cookies: These cookies are required to ensure the basic functionality of the platform.",
+        "item2": "Functional cookies: These cookies improve the user experience, e.g., by saving settings.",
+        "item3": "Analytical cookies: These cookies help us analyze and improve platform usage."
+      },
+      "subsection3": {
+        "title": "7.3 Cookie Settings",
+        "description": "You can adjust your cookie settings in your browser at any time and delete cookies that have already been set. Please note that disabling certain cookies may limit the platform's functionality."
+      }
+    },
+    "section8": {
+      "title": "8. Changes to This Privacy Policy",
+      "description": "We reserve the right to adapt this privacy policy to comply with legal or technical changes. The current version is always available on our website."
+    },
+    "section9": {
+      "title": "9. Contact",
+      "contact": "If you have questions about the processing of your data or wish to exercise your rights, please contact:"
+    },
+    "footer": {
+      "thanks": "Thank you for using Lightning TipCards."
     }
   }
 }

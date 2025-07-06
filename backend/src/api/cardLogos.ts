@@ -1,24 +1,28 @@
-import express from 'express'
+import { Router } from 'express'
 
-import { ErrorCode } from '../../../src/data/Errors'
-import type { ImageMeta } from '../../../src/data/Image'
-import type { User } from '../../../src/data/User'
+import { Image as ImageApi } from '@shared/data/api/Image.js'
+import type { AccessTokenPayload } from '@shared/data/auth/index.js'
+import { ErrorCode } from '@shared/data/Errors.js'
 
-import { getUserById, getImageMeta } from '../services/database'
-import { authGuard } from '../services/jwt'
+import type { User } from '@backend/database/deprecated/data/User.js'
+import type { Image as ImageMeta } from '@backend/database/deprecated/data/Image.js'
+import { getUserById, getImageMeta } from '@backend/database/deprecated/queries.js'
 
-const router = express.Router()
+import { authGuardAccessToken } from './middleware/auth/jwt.js'
 
-router.get('/', authGuard, async (req: express.Request, res: express.Response) => {
-  if (typeof res.locals.jwtPayload?.id !== 'string') {
-    res.status(400).json({
+const router = Router()
+
+router.get('/', authGuardAccessToken, async (_, res) => {
+  const accessTokenPayload: AccessTokenPayload = res.locals.accessTokenPayload
+  if (accessTokenPayload == null) {
+    res.status(401).json({
       status: 'error',
-      message: 'Invalid input.',
-      code: ErrorCode.InvalidInput,
+      message: 'Authorization payload missing.',
+      code: ErrorCode.AccessTokenMissing,
     })
     return
   }
-  const userId: string = res.locals.jwtPayload.id
+  const userId: string = accessTokenPayload.userId
 
   // load user from database
   let user: User | null = null
@@ -34,13 +38,13 @@ router.get('/', authGuard, async (req: express.Request, res: express.Response) =
     return
   }
 
-  const data: ImageMeta[] = []
+  const images: ImageMeta[] = []
   if (user?.availableCardsLogos != null) {
     try {
       await Promise.all(user.availableCardsLogos.map(async (imageId) => {
         const imageMeta = await getImageMeta(imageId)
         if (imageMeta != null) {
-          data.push(imageMeta)
+          images.push(imageMeta)
         }
       }))
     } catch (error: unknown) {
@@ -56,7 +60,7 @@ router.get('/', authGuard, async (req: express.Request, res: express.Response) =
 
   res.json({
     status: 'success',
-    data,
+    data: images.map((image) => ImageApi.parse(image)),
   })
 })
 

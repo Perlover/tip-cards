@@ -1,229 +1,243 @@
 <template>
-  <div class="flex flex-col flex-1 mx-auto w-full max-w-md">
-    <div
-      v-if="initializing"
-      class="flex justify-center flex-1 mt-8 px-4"
-    >
-      <AnimatedLoadingWheel />
-    </div>
-    <div
-      v-else-if="numberOfCardsToFund !== settings.numberOfCards"
-      class="flex-1 mt-8 px-4"
-    >
-      <HeadlineDefault
-        level="h1"
-        class="mt-10"
+  <TheLayout login-banner>
+    <CenterContainer>
+      <BackLinkDeprecated />
+      <div
+        v-if="initializing"
+        class="flex justify-center flex-1 mt-8"
       >
-        {{ t('setFunding.headline') }}
-      </HeadlineDefault>
-      <p class="my-3">
-        <I18nT keypath="setFunding.setName">
-          <template #setName>
-            <strong>{{ settings.setName || t('index.unnamedSetNameFallback') }}</strong>
-          </template>
-        </I18nT>
-      </p>
-      <p>
-        {{ t('setFunding.textFundingNotPossible') }}
-      </p>
-      <ButtonDefault
-        class="text-sm mt-4"
-        :href="cardsHref"
-      >
-        {{ t('setFunding.backToSet') }}
-      </ButtonDefault>
-    </div>
-    <div
-      v-else
-      class="flex-1 mt-8 px-4"
-    >
-      <HeadlineDefault
-        level="h1"
-        class="mt-10"
-      >
-        {{ t('setFunding.headline') }}
-      </HeadlineDefault>
-      <p class="my-3">
-        <I18nT keypath="setFunding.setName">
-          <template #setName>
-            <strong>{{ settings.setName || t('index.unnamedSetNameFallback') }}</strong>
-          </template>
-        </I18nT>
-      </p>
-      <div v-if="invoice != null">
-        <ParagraphDefault>
-          <I18nT
-            v-if="funded"
-            keypath="setFunding.textFunded"
-          >
-            <template #numberOfCardsToFund>
-              {{ numberOfCardsToFund }}
-            </template>
-            <template #amountAndUnitPerCard>
-              <strong
-                v-if="invoiceAmount != null"
-                class="inline-block"
-              >
-                {{ t('setFunding.amountAndUnit', { amount: formatNumber(invoiceAmount / numberOfCardsToFund / (100 * 1000 * 1000), 8, 8) }) }}
-              </strong>
-            </template>
-          </I18nT>
-          <I18nT
-            v-else
-            keypath="setFunding.invoiceText"
-            :plural="numberOfCardsToFund"
-          >
-            <template #numberOfCardsToFund>
-              {{ numberOfCardsToFund }}
-            </template>
-            <template #amountAndUnit>
-              <strong
-                v-if="invoiceAmount != null"
-                class="inline-block"
-              >
-                {{ t('setFunding.amountAndUnit', { amount: formatNumber(invoiceAmount / (100 * 1000 * 1000), 8, 8) }) }}
-              </strong>
-            </template>
-          </I18nT>
-        </ParagraphDefault>
-        <LightningQrCode
-          :value="invoice"
-          :success="funded"
-          :error="invoiceExpired ? t('setFunding.invoiceExpired') : undefined"
-        />
-        <p
-          v-if="invoiceExpired"
-          class="mb-4"
-        >
-          {{ t('setFunding.invoiceExpired') }}
-        </p>
-        <div class="flex justify-center">
-          <ButtonWithTooltip
-            type="submit"
-            variant="outline"
-            :disabled="funded"
-            :tooltip="funded ? t('setFunding.resetDisabledTooltip') : undefined"
-            @click="resetInvoice"
-          >
-            {{ t('setFunding.resetInvoice') }}
-          </ButtonWithTooltip>
-        </div>
-      </div>
-      <div v-else>
-        <ParagraphDefault class="mb-8">
-          <I18nT keypath="setFunding.text" :plural="numberOfCardsToFund">
-            <template #numberOfCardsToFund>
-              {{ numberOfCardsToFund }}
-            </template>
-            <template #amountAndUnit>
-              <strong class="inline-block">
-                {{ t('setFunding.amountAndUnit', { amount: formatNumber(amountTotal / 1E8, 8, 8) }) }}
-              </strong>
-            </template>
-          </I18nT>
-        </ParagraphDefault>
-        <form @submit.prevent="createInvoice">
-          <label class="block mb-2">
-            <span class="block">
-              {{ t('setFunding.form.amountLabel') }}:
-            </span>
-            <SatsAmountSelector
-              :amount-sats="amountPerCard"
-              :rate-btc-eur="rateBtcEur"
-              :min="21"
-              :disabled="creatingInvoice"
-              @update="amountPerCard = $event"
-            />
-            <small v-if="amountPerCard < 210" class="block leading-tight mt-1 mb-3 text-sm text-btcorange-effect">
-              {{ t('setFunding.form.smallAmountWarning') }}
-            </small>
-          </label>
-          <div class="block leading-tight my-3">
-            {{ t('setFunding.form.totalAmountLabel') }}:
-            <strong>{{ t('setFunding.amountAndUnit', { amount: formatNumber(amountTotal / 1E8, 8, 8) }) }}</strong>
-          </div>
-          <label class="block mb-2">
-            <input
-              v-model="text"
-              type="text"
-              class="w-full border my-1 px-3 py-2 focus:outline-none"
-              :disabled="creatingInvoice"
-            >
-            <small class="block">({{ t('setFunding.form.textHint') }})</small>
-          </label>
-          <label class="block mb-2">
-            <input
-              v-model="note"
-              type="text"
-              class="w-full border my-1 px-3 py-2 focus:outline-none"
-              :placeholder="t('setFunding.form.notePlaceholder')"
-              :disabled="creatingInvoice"
-            >
-            <small class="block">({{ t('setFunding.form.noteHint') }})</small>
-          </label>
-          <div class="flex flex-col items-center mt-4">
-            <ButtonDefault
-              type="submit"
-              :disabled="creatingInvoice"
-            >
-              {{ t('setFunding.form.button') }}
-            </ButtonDefault>
-          </div>
-        </form>
+        <IconAnimatedLoadingWheelDeprecated class="my-20 w-10 h-10" />
       </div>
       <div
-        v-if="userErrorMessage != null"
-        class="mt-4"
+        v-else-if="numberOfCardsToFund !== settings.numberOfCards"
+        class="flex-1 mt-8"
       >
-        <ParagraphDefault class="text-red-500" dir="ltr">
-          {{ userErrorMessage }}
-        </ParagraphDefault>
+        <HeadlineDefault
+          level="h1"
+          class="mt-10 text-center"
+        >
+          {{ t('setFunding.headline') }}
+        </HeadlineDefault>
+        <p>
+          {{ t('setFunding.textFundingNotPossible') }}
+        </p>
+        <ButtonDefault
+          class="text-sm mt-4"
+          :href="cardsHref"
+        >
+          {{ t('setFunding.backToSet') }}
+        </ButtonDefault>
       </div>
-    </div>
-  </div>
+      <div
+        v-else
+        class="flex-1 mt-8"
+      >
+        <HeadlineDefault
+          level="h1"
+          class="mt-10 text-center"
+        >
+          {{ t('setFunding.headline') }}
+        </HeadlineDefault>
+        <div v-if="invoice != null">
+          <LightningQrCode
+            class="my-7"
+            :value="invoice"
+            :success="funded"
+            :error="invoiceExpired ? t('setFunding.invoiceExpired') : undefined"
+          >
+            <template #headline>
+              <HeadlineDefault
+                level="h2"
+                class="mb-4 text-start"
+              >
+                {{ settings.setName || $t('index.unnamedSetNameFallback') }}
+              </HeadlineDefault>
+              <ParagraphDefault class="mb-4 text-start">
+                <IconTipCardSet class="inline-block w-6 h-6 me-2 text-yellow" /> {{ $t('general.cards', numberOfCardsToFund) }}
+              </ParagraphDefault>
+            </template>
+            <template #preQrCode>
+              <ParagraphDefault v-if="invoiceExpired" class="text-sm text-red">
+                {{ t('setFunding.invoiceExpired') }}
+              </ParagraphDefault>
+              <ParagraphDefault v-else class="text-sm">
+                <I18nT :keypath="funded ? 'setFunding.invoicePaidSuccessfully' : 'setFunding.payInvoice'">
+                  <template #cards>
+                    <strong>{{ $t('general.cards', numberOfCardsToFund) }}</strong>
+                  </template>
+                </I18nT>
+              </ParagraphDefault>
+              <AmountDisplayFinalSum
+                :status="funded ? 'success' : invoiceExpired || userErrorMessage != null ? 'error' : 'pending'"
+                :amount-sats="invoiceAmount"
+                :rate-btc-fiat="rateBtcEur"
+              />
+              <FundingDetailsItemAmountDisplay
+                :amount-sats="invoiceFeeAmount"
+                :selected-currency="selectedCurrency"
+                :rate-btc-fiat="rateBtcEur"
+              >
+                <template #label>
+                  {{ $t('general.fee') }}
+                  <FeeInfoIconWithTooltip
+                    class="ms-1"
+                    :minimum-card-amount="minimumCardAmount"
+                  />
+                </template>
+              </FundingDetailsItemAmountDisplay>
+            </template>
+          </LightningQrCode>
+          <div class="flex justify-center">
+            <ButtonWithTooltip
+              type="submit"
+              variant="outline"
+              data-test="set-funding-reset-invoice"
+              :disabled="funded"
+              :tooltip="funded ? t('setFunding.resetDisabledTooltip') : undefined"
+              @click="resetInvoice"
+            >
+              {{ t('setFunding.resetInvoice') }}
+            </ButtonWithTooltip>
+          </div>
+        </div>
+        <div v-else>
+          <div class="max-w-sm mx-auto mb-8 p-5 shadow-default rounded-default ">
+            <form @submit.prevent="createInvoice">
+              <HeadlineDefault
+                level="h2"
+                class="mb-4"
+              >
+                {{ settings.setName || $t('index.unnamedSetNameFallback') }}
+              </HeadlineDefault>
+              <ParagraphDefault class="mb-4">
+                <IconTipCardSet class="inline-block w-6 h-6 me-2 text-yellow" /> {{ $t('general.cards', numberOfCardsToFund) }}
+              </ParagraphDefault>
+              <SatsAmountSelector
+                class="my-4"
+                :label="t('setFunding.form.amountLabel')"
+                :amount-sats="amountPerCard"
+                :selected-currency="selectedCurrency"
+                :rate-btc-fiat="rateBtcEur"
+                :min="minimumCardAmount"
+                :max="maximumCardAmount"
+                :disabled="creatingInvoice"
+                @update:amount-sats="amountPerCard = $event"
+                @update:selected-currency="selectedCurrency = $event"
+              />
+              <small v-if="amountPerCard < recommendedMinimumCardAmount" class="block leading-tight mb-3 text-sm text-yellow-dark">
+                {{ t('setFunding.form.smallAmountWarning') }}
+              </small>
+              <FundingDetailsItemAmountDisplay
+                :amount-sats="totalAmountNet"
+                :selected-currency="selectedCurrency"
+                :rate-btc-fiat="rateBtcEur"
+                :label="$t('setFunding.form.totalAmountLabel')"
+              />
+              <FundingDetailsItemAmountDisplay
+                :amount-sats="totalFeeAmount"
+                :selected-currency="selectedCurrency"
+                :rate-btc-fiat="rateBtcEur"
+              >
+                <template #label>
+                  {{ $t('general.fee') }}
+                  <FeeInfoIconWithTooltip
+                    class="ms-1"
+                    :minimum-card-amount="minimumCardAmount"
+                  />
+                </template>
+              </FundingDetailsItemAmountDisplay>
+              <FundingDetailsItemAmountDisplay
+                strong
+                :amount-sats="totalAmountIncludingFee"
+                :selected-currency="selectedCurrency"
+                :rate-btc-fiat="rateBtcEur"
+                :label="$t('general.totalIncludingFee')"
+              />
+              <hr class="my-8">
+              <TextField
+                v-model="text"
+                :label="$t('funding.form.textPlaceholder')"
+                :placeholder="$t('funding.form.textPlaceholder')"
+                class="w-full my-4"
+                fiat-currency="EUR"
+                :disabled="creatingInvoice"
+              />
+              <TextField
+                v-model="note"
+                :label="$t('cards.status.labelNote')"
+                :placeholder="$t('setFunding.form.notePlaceholder')"
+                class="w-full my-4"
+                :disabled="creatingInvoice"
+              />
+              <div class="flex flex-col items-center mt-4">
+                <ButtonDefault
+                  type="submit"
+                  :disabled="creatingInvoice"
+                >
+                  {{ t('funding.form.button') }}
+                </ButtonDefault>
+              </div>
+            </form>
+          </div>
+        </div>
+        <div
+          v-if="userErrorMessage != null"
+          class="mt-4"
+        >
+          <ParagraphDefault class="text-red-500" dir="ltr">
+            {{ userErrorMessage }}
+          </ParagraphDefault>
+        </div>
+      </div>
+    </CenterContainer>
+  </TheLayout>
 </template>
 
 <script setup lang="ts">
 import axios from 'axios'
-import { onBeforeMount, ref, reactive, computed } from 'vue'
+import { onBeforeMount, ref, reactive, computed, onBeforeUnmount } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRoute, useRouter } from 'vue-router'
 
-import type { Set, Settings } from '@root/data/Set'
+import type { Set, Settings } from '@shared/data/api/Set'
+import { calculateFeeForCard } from '@shared/modules/feeCalculation'
 
-import I18nT from '@/modules/I18nT'
+import TheLayout from '@/components/layout/TheLayout.vue'
+import CenterContainer from '@/components/layout/CenterContainer.vue'
 import HeadlineDefault from '@/components/typography/HeadlineDefault.vue'
 import ParagraphDefault from '@/components/typography/ParagraphDefault.vue'
-import AnimatedLoadingWheel from '@/components/AnimatedLoadingWheel.vue'
-import ButtonDefault from '@/components/ButtonDefault.vue'
+import IconAnimatedLoadingWheelDeprecated from '@/components/icons/IconAnimatedLoadingWheelDeprecated.vue'
+import ButtonDefault from '@/components/buttons/ButtonDefault.vue'
 import ButtonWithTooltip from '@/components/ButtonWithTooltip.vue'
 import LightningQrCode from '@/components/LightningQrCode.vue'
 import SatsAmountSelector from '@/components/SatsAmountSelector.vue'
-import formatNumber from '@/modules/formatNumber'
 import { rateBtcEur } from '@/modules/rateBtcFiat'
 import { loadCardStatus } from '@/modules/loadCardStatus'
 import hashSha256 from '@/modules/hashSha256'
 import { getDefaultSettings, decodeCardsSetSettings } from '@/stores/cardsSets'
 import { BACKEND_API_ORIGIN } from '@/constants'
-import { useI18nHelpers, type LocaleCode } from '@/modules/initI18n'
-
-const { currentLocale } = useI18nHelpers()
+import BackLinkDeprecated from '@/components/BackLinkDeprecated.vue'
+import IconTipCardSet from '@/components/icons/IconTipCardSet.vue'
+import type { SelectedCurrency } from '@/modules/useAmountConversion'
+import TextField from '@/components/forms/TextField.vue'
+import FundingDetailsItemAmountDisplay from '@/components/FundingDetailsItemAmountDisplay.vue'
+import AmountDisplayFinalSum from '@/components/AmountDisplayFinalSum.vue'
+import FeeInfoIconWithTooltip from '@/components/FeeInfoIconWithTooltip.vue'
 
 const { t } = useI18n()
 const route = useRoute()
 const router = useRouter()
 
+const defaultCardAmount = 2100
+const recommendedMinimumCardAmount = 210
+const minimumCardAmount = 21
+const maximumCardAmount = 2100000
+
+const selectedCurrency = ref<SelectedCurrency>('sats')
 const initializing = ref(true)
 const settings = reactive(getDefaultSettings())
-const amountPerCard = ref(2100)
-
-let textValue = ''
-
-const text = computed({
-  get: () => currentLocale.value && textValue === '' ? t('cards.settings.defaults.invoiceText') : textValue,
-  set: (val) => textValue = val,
-})
-
+const amountPerCard = ref(defaultCardAmount)
+const text = ref(t('cards.settings.defaults.invoiceText'))
 const textIsDirty = ref(false)
 const note = ref<string>()
 const noteIsDirty = ref(false)
@@ -231,10 +245,13 @@ const userErrorMessage = ref<string>()
 const set = ref<Set>()
 const cardIndicesNotUnfunded = ref<number[]>([])
 const creatingInvoice = ref(false)
+const pollingTimeout = ref<NodeJS.Timeout>()
 
 const funded = computed(() => set.value?.invoice?.paid != null)
 const invoice = computed(() => set.value?.invoice?.payment_request)
-const invoiceAmount = computed(() => set.value?.invoice?.amount)
+const invoiceAmountNet = computed(() => set.value?.invoice?.amount)
+const invoiceFeeAmount = computed(() => set.value?.invoice?.feeAmount)
+const invoiceAmount = computed(() => invoiceAmountNet.value != null && invoiceFeeAmount.value ? invoiceAmountNet.value + invoiceFeeAmount.value : undefined)
 const invoiceExpired = computed(() => !!set.value?.invoice?.expired)
 
 const loadSetData = async () => {
@@ -248,24 +265,29 @@ const loadSetData = async () => {
     console.error(error)
   }
 
-  if (set.value == null) {
-    const cardIndicesNotUnfundedLocal: number[] = []
-    try {
-      await Promise.all([...new Array(settings.numberOfCards).keys()].map(async (index) => {
-        const cardHash = await hashSha256(`${route.params.setId}/${index}`)
-        const { status } = await loadCardStatus(cardHash, 'cards')
-        if (status !== 'unfunded') {
-          cardIndicesNotUnfundedLocal.push(index)
-        }
-      }))
-      cardIndicesNotUnfunded.value = cardIndicesNotUnfundedLocal
-    } catch (error) {
-      console.error(error)
-    }
+  const cardIndicesNotUnfundedLocal: number[] = []
+  try {
+    await Promise.all([...new Array(settings.numberOfCards).keys()].map(async (index) => {
+      const cardHash = await hashSha256(`${route.params.setId}/${index}`)
+      const { status } = await loadCardStatus(cardHash)
+      if (status !== 'unfunded') {
+        cardIndicesNotUnfundedLocal.push(index)
+      }
+    }))
+    cardIndicesNotUnfunded.value = cardIndicesNotUnfundedLocal
+  } catch (error) {
+    console.error(error)
   }
   initializing.value = false
 
-  setTimeout(loadSetData, 10 * 1000)
+  pollingTimeout.value = setTimeout(loadSetData, 10 * 1000)
+}
+
+const onVisibilityChange = () => {
+  if (document.visibilityState !== 'visible') {
+    return
+  }
+  loadSetData()
 }
 
 onBeforeMount(() => {
@@ -273,12 +295,20 @@ onBeforeMount(() => {
   let settingsDecoded: Settings | undefined = undefined
   try {
     settingsDecoded = decodeCardsSetSettings(settingsEncoded)
-  } catch (error) {
+  } catch {
     // do nothing
   }
   Object.assign(settings, settingsDecoded)
 
   loadSetData()
+  document.addEventListener('visibilitychange', onVisibilityChange)
+})
+
+onBeforeUnmount(() => {
+  if (pollingTimeout.value != null) {
+    clearTimeout(pollingTimeout.value)
+  }
+  document.removeEventListener('visibilitychange', onVisibilityChange)
 })
 
 const numberOfCardsToFund = computed<number>(() => {
@@ -287,7 +317,10 @@ const numberOfCardsToFund = computed<number>(() => {
   }
   return settings.numberOfCards - cardIndicesNotUnfunded.value.length
 })
-const amountTotal = computed<number>(() => amountPerCard.value * numberOfCardsToFund.value)
+const totalAmountNet = computed<number>(() => amountPerCard.value * numberOfCardsToFund.value)
+const totalFeeAmount = computed(() => (calculateFeeForCard(amountPerCard.value)) * numberOfCardsToFund.value)
+const totalAmountIncludingFee = computed(() => totalAmountNet.value + totalFeeAmount.value)
+
 const cardIndicesToFund = computed<number[]>(() => [...new Array(settings.numberOfCards).keys()].filter(index => !cardIndicesNotUnfunded.value.includes(index)))
 
 const createInvoice = async () => {
@@ -322,13 +355,14 @@ const resetInvoice = async () => {
       `${BACKEND_API_ORIGIN}/api/set/invoice/${route.params.setId}`)
     if (response.data.status === 'success') {
       set.value = undefined
-      amountPerCard.value = 2100
+      amountPerCard.value = defaultCardAmount
       userErrorMessage.value = undefined
       creatingInvoice.value = false
       text.value = t('cards.settings.defaults.invoiceText')
       textIsDirty.value = false
       note.value = undefined
       noteIsDirty.value = false
+      cardIndicesNotUnfunded.value = []
     }
   } catch(error) {
     console.error(error)
@@ -336,12 +370,18 @@ const resetInvoice = async () => {
   }
 }
 
-const cardsHref = computed(() => router.resolve({
-  name: 'cards',
-  params: {
-    lang: route.params.lang,
-    setId: route.params.setId,
-    settings: route.params.settings,
-  },
-}).href)
+const cardsHref = computed(() => {
+  if (route.name !== 'set-funding') {
+    return undefined
+  }
+  const targetRoute = router.resolve({
+    name: 'cards',
+    params: {
+      lang: route.params.lang,
+      setId: route.params.setId,
+      settings: route.params.settings,
+    },
+  })
+  return targetRoute.href
+})
 </script>

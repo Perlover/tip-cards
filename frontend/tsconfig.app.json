@@ -1,0 +1,35 @@
+{
+  "extends": "@vue/tsconfig/tsconfig.dom.json",
+  "include": [
+    "env.d.ts",
+    "src/**/*",
+    "src/**/*.vue",
+    "src/locales/**/*.json",
+    "../shared/src/**/*",
+    "../backend/src/**/*",
+    "../backend/drizzle.config.ts",
+    "tests/**/*.ts",
+  ],
+  "exclude": [
+    "tests/**/*.ts",
+  ],
+  "compilerOptions": {
+    "composite": true,
+    "tsBuildInfoFile": "../node_modules/.tmp/tsconfig.app.tsbuildinfo",
+
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["./src/*"],
+      "@shared/*": ["../shared/src/*"],
+      "@backend/*": ["../backend/src/*"],
+      "@auth/*": ["../backend/src/auth/*"],
+    },
+    "target": "ES2022",
+    "typeRoots": [
+      "./src/types",
+      "../node_modules/@types",
+    ],
+    "outDir": "../dist/frontend",
+    "rootDir": "../",
+  },
+}

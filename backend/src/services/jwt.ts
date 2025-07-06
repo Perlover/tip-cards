@@ -1,74 +1,32 @@
-import type { Request, Response, NextFunction } from 'express'
-import fs from 'fs'
-import {
-  generateKeyPair, type KeyLike, SignJWT, jwtVerify,
-  importSPKI, importPKCS8, exportSPKI, exportPKCS8,
-} from 'jose'
+import assert from 'assert'
+import axios from 'axios'
+import crypto from 'crypto'
 
-import { ErrorCode } from '../../../src/data/Errors'
-import type { User } from '../../../src/data/User'
+import JwtValidator from '@shared/modules/Jwt/JwtValidator.js'
+import JwtKeyPairHandler from '@shared/modules/Jwt/JwtKeyPairHandler.js'
 
-const FILENAME_PUBLIC = 'lnurl.auth.pem.pub'
-const FILENAME = 'lnurl.auth.pem'
-const alg = 'RS256'
+import { EXPRESS_PORT, JWT_AUTH_ISSUER } from '@backend/constants.js'
 
-let publicKey: KeyLike
-let privateKey: KeyLike
-const loadKeys = async () => {
-  if (publicKey != null && privateKey != null) {
-    return { publicKey, privateKey }
+const PUBLIC_KEY_API = `http://localhost:${EXPRESS_PORT}/auth/api/publicKey`
+
+let jwtValidator: JwtValidator | null = null
+
+export const getJwtValidator = () => {
+  if (jwtValidator == null) {
+    throw new Error('JwtValidator not initialized. Call initJwtValidator() first')
   }
-  try {
-    if (fs.existsSync(FILENAME_PUBLIC) && fs.existsSync(FILENAME)) {
-      let data = fs.readFileSync(FILENAME_PUBLIC, 'utf8')
-      publicKey = await importSPKI(data, alg)
-      data = fs.readFileSync(FILENAME, 'utf8')
-      privateKey = await importPKCS8(data, alg)
-    } else {
-      ({ publicKey, privateKey } = await generateKeyPair(alg))
-      const spkiPem = await exportSPKI(publicKey)
-      fs.writeFileSync(FILENAME_PUBLIC, spkiPem)
-      const pkcs8Pem = await exportPKCS8(privateKey)
-      fs.writeFileSync(FILENAME, pkcs8Pem)
-    }
-  } catch (error) {
-    console.error(error)
-  }
-  return { publicKey, privateKey }
+  return jwtValidator
 }
 
-export const createJWT = async ({ id, lnurlAuthKey }: User) => {
-  const { privateKey } = await loadKeys()
-  return new SignJWT({ id, lnurlAuthKey })
-    .setProtectedHeader({ alg })
-    .setIssuedAt()
-    .setIssuer('tipcards:auth')
-    .setAudience('tipcards')
-    .setExpirationTime('24h')
-    .sign(privateKey)
-}
-
-export const authGuard = async (req: Request, res: Response, next: NextFunction) => {
-  const { publicKey } = await loadKeys()
-
-  if (req.headers.authorization == null) {
-    res.status(401).json({
-      status: 'error',
-      message: 'Authorization header missing.',
-      code: ErrorCode.MissingAuthorizationHeader,
-    })
-    return
+export const initJwtValidator = async () => {
+  if (jwtValidator != null) {
+    throw new Error('JwtValidator already initialized')
   }
 
-  try {
-    const { payload } = await jwtVerify(req.headers.authorization, publicKey)
-    res.locals.jwtPayload = payload
-    next()
-  } catch (error) {
-    res.status(401).json({
-      status: 'error',
-      message: 'Invalid authorization token.',
-      code: ErrorCode.InvalidAuthorizationHeader,
-    })
-  }
+  const response = await axios(PUBLIC_KEY_API)
+  const publicKey = await JwtKeyPairHandler.convertPublicKeyToKeyLike({
+    publicKeyAsString: response.data.data,
+  })
+  assert(publicKey instanceof crypto.KeyObject, `Could not load publicKey from ${PUBLIC_KEY_API}`)
+  jwtValidator = new JwtValidator(publicKey, JWT_AUTH_ISSUER)
 }

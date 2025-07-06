@@ -1,107 +1,93 @@
-import { createRouter, createWebHistory, type RouteLocationNormalizedLoaded } from 'vue-router'
+import { createRouter, createWebHistory } from 'vue-router'
 
-import i18n, { LOCALES } from '@/modules/initI18n'
+import { about, type RouteAbout } from '@/router/pages/about'
+import { bulkWithdraw, type RouteBulkWithdraw } from '@/router/pages/bulkWithdraw'
+import { cards, type RouteCards } from '@/router/pages/cards'
+import { dashboard, type RouteDashboard } from '@/router/pages/dashboard'
+import { faqs, type RouteFaqs } from '@/router/pages/faqs'
+import { funding, type RouteFunding } from '@/router/pages/funding'
+import { history, type RouteHistory } from './pages/history'
+import { home, type RouteHome } from '@/router/pages/home'
+import { landing, type RouteLanding } from '@/router/pages/landing'
+import { localStorageSets, type RouteLocalStorageSets } from '@/router/pages/localStorageSets'
+import { notFound, type RouteNotFound } from './pages/notFound'
+import { set, type RouteSet } from '@/router/pages/set'
+import { setFunding, type RouteSetFunding } from '@/router/pages/setFunding'
+import { setPrinting, type RouteSetPrinting } from '@/router/pages/setPrinting'
+import { sets, type RouteSets } from '@/router/pages/sets'
+import { statistics, type RouteStatistics } from '@/router/pages/statistics'
+import {
+  styleGuide, type RouteStyleGuide,
+  styleGuideComponents, type RouteStyleGuideComponents,
+  styleGuideForms, type RouteStyleGuideForms,
+  styleGuideIcons, type RouteStyleGuideIcons,
+  styleGuideTypographyAndButtons, type RouteStyleGuideTypographyAndButtons,
+} from '@/router/pages/styleGuide'
+import { userAccount, type RouteUserAccount } from '@/router/pages/userAccount'
+import { privacyPolicy, type RoutePrivacyPolicy } from './pages/privacyPolicy'
 
-const PageIndex = () => import('@/pages/PageIndex.vue')
-const PageLanding = () => import('@/pages/PageLanding.vue')
-const PageCards = () => import('@/pages/PageCards.vue')
-const PageFunding = () => import('@/pages/PageFunding.vue')
-const PageSetFunding = () => import('@/pages/PageSetFunding.vue')
-const PageAuthDevelopment = () => import('@/pages/PageAuthDevelopment.vue')
-const PageAbout = () => import('@/pages/PageAbout.vue')
-const PageStatistics = () => import('@/pages/PageStatistics.vue')
+export interface RouteNamedMap {
+  about: RouteAbout,
+  'bulk-withdraw': RouteBulkWithdraw,
+  cards: RouteCards,
+  dashboard: RouteDashboard,
+  faqs: RouteFaqs,
+  funding: RouteFunding,
+  history: RouteHistory,
+  home: RouteHome,
+  landing: RouteLanding,
+  'local-storage-sets': RouteLocalStorageSets,
+  'not-found': RouteNotFound,
+  'privacy-policy': RoutePrivacyPolicy,
+  set: RouteSet,
+  'set-funding': RouteSetFunding,
+  'set-printing': RouteSetPrinting,
+  sets: RouteSets,
+  statistics: RouteStatistics,
+  'style-guide': RouteStyleGuide,
+  'style-guide/components': RouteStyleGuideComponents,
+  'style-guide/forms': RouteStyleGuideForms,
+  'style-guide/icons': RouteStyleGuideIcons,
+  'style-guide/typography-and-buttons': RouteStyleGuideTypographyAndButtons,
+  'user-account': RouteUserAccount,
+}
+
+declare module 'vue-router' {
+  interface TypesConfig {
+    RouteNamedMap: RouteNamedMap
+  }
+}
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   scrollBehavior: (to, from) => {
-    if (to.name === from.name) return {}
-    return { top: 0 }
+    if (to.name === from.name) { return {} }
+    return { top: 0, behavior: 'instant' }
   },
   routes: [
-    {
-      path: `/:lang(${Object.keys(LOCALES).join('|')})?`,
-      children: [
-        {
-          path: ':',
-          name: 'home',
-          component: PageIndex,
-        },
-        {
-          path: 'landing',
-          name: 'landing',
-          component: PageLanding,
-          meta: {
-            title: () => i18n.global.t('landing.title'),
-            backlink: true,
-            backlinkOnlyInternalReferrer: true,
-          },
-        },
-        {
-          path: 'preview',
-          name: 'preview',
-          component: PageLanding,
-          meta: {
-            title: () => i18n.global.t('landing.titlePreview'),
-            backlink: true,
-          },
-        },
-        {
-          path: 'cards/:setId?/:settings?',
-          name: 'cards',
-          component: PageCards,
-          meta: {
-            title: () => false, // title will be set in the page component
-            backlink: 'home',
-          },
-        },
-        {
-          path: 'funding/:cardHash',
-          name: 'funding',
-          component: PageFunding,
-          meta: {
-            title: () => i18n.global.t('funding.title'),
-            backlink: true,
-          },
-        },
-        {
-          path: 'set-funding/:setId/:settings?',
-          name: 'set-funding',
-          component: PageSetFunding,
-          meta: {
-            title: () => i18n.global.t('setFunding.title'),
-            backlink: (route: RouteLocationNormalizedLoaded) => 
-              router.resolve({
-                name: 'cards',
-                params: {
-                  lang: route.params.lang,
-                  setId: route.params.setId,
-                  settings: route.params.settings,
-                },
-              }),
-          },
-        },
-        {
-          path: 'about',
-          name: 'about',
-          component: PageAbout,
-          meta: {
-            title: () => 'About',
-            backlink: true,
-          },
-        },
-        {
-          path: 'auth',
-          name: 'auth',
-          component: PageAuthDevelopment,
-        },
-        {
-          path: 'statistics',
-          name: 'statistics',
-          component: PageStatistics,
-          meta: { title: () => 'Statistics' },
-        },
-      ],
-    },
+    about,
+    bulkWithdraw(() => router),
+    cards,
+    dashboard,
+    faqs,
+    funding,
+    history,
+    home,
+    landing,
+    localStorageSets,
+    notFound,
+    privacyPolicy,
+    set,
+    setFunding(() => router),
+    setPrinting,
+    sets,
+    statistics,
+    styleGuide,
+    styleGuideComponents,
+    styleGuideForms,
+    styleGuideIcons,
+    styleGuideTypographyAndButtons,
+    userAccount,
   ],
 })
 

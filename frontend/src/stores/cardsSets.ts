@@ -1,12 +1,11 @@
 import axios from 'axios'
 import { defineStore, storeToRefs } from 'pinia'
-import { computed, ref, nextTick, watch } from 'vue'
+import { ref, nextTick, watch } from 'vue'
 
-import type { Settings, Set } from '@root/data/Set'
-import { ErrorCode } from '@root/data/Errors'
+import type { Settings, Set } from '@shared/data/api/Set'
 
 import i18n from '@/modules/initI18n'
-import { useUserStore } from '@/stores/user'
+import { useAuthStore } from '@/stores/auth'
 import { BACKEND_API_ORIGIN } from '@/constants'
 
 const { t } = i18n.global
@@ -30,7 +29,7 @@ export const decodeCardsSetSettings = (settingsEncoded: string): Settings => {
   let settingsDecoded = {}
   try {
     settingsDecoded = JSON.parse(decodeURIComponent(atob(settingsEncoded)))
-  } catch (error) {
+  } catch {
     // do nothing
   }
   return {
@@ -51,93 +50,14 @@ export const encodeCardsSetSettings = (settingsDecoded: Settings | null | undefi
   })))
 }
 
-//////
-// localStorage
-const setsLocalStorage = ref<Set[]>([])
-const SAVED_CARDS_SETS_KEY = 'savedTipCardsSets'
-
-type SetWithEncodedSettings = {
-  setId: string
-  settings: string
-  created?: string // iso string
-  date: string // iso string of latest update
-}
-
-/**
- * transform Set into SetWithEncodedSettings
- */
-const fromSet = (set: Set): SetWithEncodedSettings => {
-  let date = new Date().toISOString()
-  if (set.date != null) {
-    date = new Date(set.date * 1000).toISOString()
-  }
-  let created = date
-  if (set.created != null) {
-    created = new Date(set.created * 1000).toISOString()
-  }
-  return {
-    setId: set.id,
-    settings: encodeCardsSetSettings(set.settings),
-    created,
-    date,
-  }
-}
-
-/**
- * transform SetWithEncodedSettings into Set
- */
-const toSet = (set: SetWithEncodedSettings): Set => {
-  let created = Math.floor(+ new Date(set.date) / 1000)
-  if (set.created != null) {
-    created = Math.floor(+ new Date(set.created) / 1000)
-  }
-  return {
-    id: set.setId,
-    settings: decodeCardsSetSettings(set.settings),
-    created,
-    date: Math.floor(+ new Date(set.date) / 1000),
-  }
-}
-
-const loadSetsFromlocalStorage = () => {
-  try {
-    const fromLocalStorage = JSON.parse(localStorage.getItem(SAVED_CARDS_SETS_KEY) || '[]') as SetWithEncodedSettings[]
-    setsLocalStorage.value = fromLocalStorage.map((set) => toSet(set))
-  } catch (error) {
-    // do nothing
-  }
-}
-
-const saveCardsSetToLocalStorage = (set: Set) => {
-  loadSetsFromlocalStorage()
-  const existingIndex = setsLocalStorage.value.findIndex(({ id: existingSetId }) => existingSetId === set.id)
-  const newSets: SetWithEncodedSettings[] = setsLocalStorage.value.map((currentSet) => fromSet(currentSet))
-  if (existingIndex > -1) {
-    newSets[existingIndex] = fromSet(set)
-  } else {
-    newSets.push(fromSet(set))
-  }
-  localStorage.setItem(SAVED_CARDS_SETS_KEY, JSON.stringify(newSets))
-  loadSetsFromlocalStorage()
-}
-
-const deleteCardsSetFromLocalStorage = (id: string) => {
-  loadSetsFromlocalStorage()
-  const newSets: SetWithEncodedSettings[] = setsLocalStorage.value
-    .filter((set) => set.id !== id)
-    .map((set) => fromSet(set))
-  localStorage.setItem(SAVED_CARDS_SETS_KEY, JSON.stringify(newSets))
-  loadSetsFromlocalStorage()
-}
-
 /////
 // server
 const fetching = ref(false)
 const fetchingUserErrorMessages = ref<string[]>([])
-const setsServer = ref<Set[]>([])
+const sets = ref<Set[]>([])
 let abortController: AbortController
 
-const loadSetsFromServer = async () => {
+const loadSets = async () => {
   if (fetching.value) {
     return
   }
@@ -146,7 +66,7 @@ const loadSetsFromServer = async () => {
   abortController = new AbortController()
   try {
     const response = await axios.get(`${BACKEND_API_ORIGIN}/api/set/`, { signal: abortController.signal })
-    setsServer.value = response.data.data
+    sets.value = response.data.data
   } catch (error) {
     if (!axios.isCancel(error)) {
       console.error(error)
@@ -159,12 +79,12 @@ const loadSetsFromServer = async () => {
 }
 
 const saveSetToServer = async (set: Set) => {
-  const oldSets = setsServer.value
-  const existingIndex = setsServer.value.findIndex(({ id }) => id === set.id)
+  const oldSets = sets.value
+  const existingIndex = sets.value.findIndex(({ id }) => id === set.id)
   if (existingIndex > -1) {
-    setsServer.value[existingIndex] = set
+    sets.value[existingIndex] = set
   } else {
-    setsServer.value.push(set)
+    sets.value.push(set)
   }
   try {
     const response = await axios.post(`${BACKEND_API_ORIGIN}/api/set/${set.id}/`, set)
@@ -172,14 +92,14 @@ const saveSetToServer = async (set: Set) => {
       throw response.data
     }
   } catch (error) {
-    setsServer.value = oldSets
+    sets.value = oldSets
     throw error
   } finally {
     // refresh asynchronously
     setTimeout(() => {
       try {
-        loadSetsFromServer()
-      } catch (error) {
+        loadSets()
+      } catch {
         // do nothing as nobody subscribed to this call
       }
     }, 0)
@@ -187,22 +107,22 @@ const saveSetToServer = async (set: Set) => {
 }
 
 const deleteSetFromServer = async (setId: string) => {
-  const oldSets = setsServer.value
-  setsServer.value = setsServer.value.filter(({ id }) => id !== setId)
+  const oldSets = sets.value
+  sets.value = sets.value.filter(({ id }) => id !== setId)
   try {
     const response = await axios.delete(`${BACKEND_API_ORIGIN}/api/set/${setId}/`)
     if (response.data.status !== 'success') {
       throw response.data
     }
   } catch (error) {
-    setsServer.value = oldSets
+    sets.value = oldSets
     throw error
   } finally {
     // refresh asynchronously
     setTimeout(() => {
       try {
-        loadSetsFromServer()
-      } catch (error) {
+        loadSets()
+      } catch {
         // do nothing as nobody subscribed to this call
       }
     }, 0)
@@ -212,16 +132,13 @@ const deleteSetFromServer = async (setId: string) => {
 /////
 // store
 export const useCardsSetsStore = defineStore('cardsSets', () => {
-  const userStore = useUserStore()
-  const { isLoggedIn } = storeToRefs(userStore)
+  const authStore = useAuthStore()
+  const { isLoggedIn } = storeToRefs(authStore)
 
   const subscribed = ref(false)
   const callbacks: { resolve: CallableFunction, reject: CallableFunction }[] = []
-  const migrating = ref(false)
-  const migratingErrors = ref<string[]>([])
 
   const reload = async () => {
-    loadSetsFromlocalStorage()
     if (!isLoggedIn.value) {
       callbacks.forEach(({ resolve }) => resolve())
       return
@@ -230,9 +147,9 @@ export const useCardsSetsStore = defineStore('cardsSets', () => {
       return
     }
     try {
-      await loadSetsFromServer()
+      await loadSets()
       callbacks.forEach(({ resolve }) => resolve())
-    } catch (error) {
+    } catch {
       callbacks.forEach(({ reject }) => reject())
     } finally {
       callbacks.length = 0
@@ -254,8 +171,6 @@ export const useCardsSetsStore = defineStore('cardsSets', () => {
   const saveSet = async (set: Set) => {
     if (isLoggedIn.value) {
       await saveSetToServer(set)
-    } else {
-      saveCardsSetToLocalStorage(set)
     }
   }
 
@@ -265,56 +180,14 @@ export const useCardsSetsStore = defineStore('cardsSets', () => {
   const deleteSet = async (setId: string) => {
     if (isLoggedIn.value) {
       await deleteSetFromServer(setId)
-    } else {
-      deleteCardsSetFromLocalStorage(setId)
     }
-  }
-
-  const migrate = async () => {
-    if (migrating.value) {
-      return
-    }
-    migrating.value = true
-    migratingErrors.value = []
-    let hasError = false
-    await Promise.all(setsLocalStorage.value.map(async (set) => {
-      const setOnServer = setsServer.value.find((currentSet) => currentSet.id === set.id)
-      if (
-        setOnServer == null
-        || Number(set.date) > Number(setOnServer.date)
-      ) {
-        try {
-          await saveSetToServer(set)
-        } catch (error) {
-          console.error(error)
-          hasError = true
-          if (
-            axios.isAxiosError(error)
-            && error.response?.data?.code === ErrorCode.SetBelongsToAnotherUser
-          ) {
-            migratingErrors.value.push(t(
-              set.settings?.setName != null && set.settings?.setName.length > 0
-                ? 'stores.cardsSets.errors.namedSetBelongsToAnotherUser'
-                : 'stores.cardsSets.errors.setBelongsToAnotherUser',
-              { name: set.settings?.setName },
-            ))
-          }
-          return
-        }
-      }
-      deleteCardsSetFromLocalStorage(set.id)
-    }))
-    if (hasError) {
-      migratingErrors.value.push(t('stores.cardsSets.errors.unableToMigrateSets'))
-    }
-    migrating.value = false
   }
 
   watch(isLoggedIn, async () => {
     if (!subscribed.value) {
       return
     }
-    setsServer.value = []
+    sets.value = []
     if (fetching.value && abortController != null) {
       abortController.abort()
       await nextTick()
@@ -322,19 +195,12 @@ export const useCardsSetsStore = defineStore('cardsSets', () => {
     reload()
   }, { immediate: true })
 
-  const sets = computed(() => [...setsLocalStorage.value, ...setsServer.value])
-  const hasSetsInLocalStorage = computed(() => setsLocalStorage.value.length > 0)
-
   return {
     fetching,
-    migrating,
-    migratingErrors,
+    fetchingUserErrorMessages,
     sets,
     subscribe,
     saveSet,
     deleteSet,
-    migrate,
-    hasSetsInLocalStorage,
-    fetchingUserErrorMessages,
   }
 })

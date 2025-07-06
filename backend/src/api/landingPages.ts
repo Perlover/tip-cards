@@ -1,24 +1,28 @@
-import express from 'express'
+import { Router } from 'express'
 
-import { ErrorCode } from '../../../src/data/Errors'
-import type { LandingPage } from '../../../src/data/LandingPage'
-import type { User } from '../../../src/data/User'
+import { LandingPage as LandingPageApi } from '@shared/data/api/LandingPage.js'
+import type { AccessTokenPayload } from '@shared/data/auth/index.js'
+import { ErrorCode } from '@shared/data/Errors.js'
 
-import { getUserById, getLandingPage } from '../services/database'
-import { authGuard } from '../services/jwt'
+import type { LandingPage } from '@backend/database/deprecated/data/LandingPage.js'
+import type { User } from '@backend/database/deprecated/data/User.js'
+import { getUserById, getLandingPage } from '@backend/database/deprecated/queries.js'
 
-const router = express.Router()
+import { authGuardAccessToken } from './middleware/auth/jwt.js'
 
-router.get('/', authGuard, async (req: express.Request, res: express.Response) => {
-  if (typeof res.locals.jwtPayload?.id !== 'string') {
-    res.status(400).json({
+const router = Router()
+
+router.get('/', authGuardAccessToken, async (_, res) => {
+  const accessTokenPayload: AccessTokenPayload = res.locals.accessTokenPayload
+  if (accessTokenPayload == null) {
+    res.status(401).json({
       status: 'error',
-      message: 'Invalid input.',
-      code: ErrorCode.InvalidInput,
+      message: 'Authorization payload missing.',
+      code: ErrorCode.AccessTokenMissing,
     })
     return
   }
-  const userId: string = res.locals.jwtPayload.id
+  const userId: string = accessTokenPayload.userId
 
   // load user from database
   let user: User | null = null
@@ -34,13 +38,13 @@ router.get('/', authGuard, async (req: express.Request, res: express.Response) =
     return
   }
 
-  const data: LandingPage[] = []
+  const landingPages: LandingPage[] = []
   if (user?.availableLandingPages != null) {
     try {
       await Promise.all(user.availableLandingPages.map(async (landingPageId) => {
         const landingPage = await getLandingPage(landingPageId)
         if (landingPage != null) {
-          data.push(landingPage)
+          landingPages.push(landingPage)
         }
       }))
     } catch (error: unknown) {
@@ -56,11 +60,11 @@ router.get('/', authGuard, async (req: express.Request, res: express.Response) =
 
   res.json({
     status: 'success',
-    data,
+    data: landingPages.map((landingPage) => LandingPageApi.parse(landingPage)),
   })
 })
 
-router.get('/:landingPageId', async (req: express.Request, res: express.Response) => {
+router.get('/:landingPageId', async (req, res) => {
   const landingPageId: string = req.params.landingPageId
 
   // load landing page from database
@@ -68,7 +72,7 @@ router.get('/:landingPageId', async (req: express.Request, res: express.Response
     const landingPage = await getLandingPage(landingPageId)
     res.json({
       status: 'success',
-      data: landingPage,
+      data: LandingPageApi.parse(landingPage),
     })
   } catch (error: unknown) {
     console.error(ErrorCode.UnknownDatabaseError, error)

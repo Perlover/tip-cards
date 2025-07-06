@@ -1,23 +1,14 @@
 {
-  "extends": "@vue/tsconfig/tsconfig.web.json",
-  "include": ["env.d.ts", "src/**/*", "src/**/*.vue", "../src/**/*"],
-  "compilerOptions": {
-    "baseUrl": ".",
-    "paths": {
-      "@/*": ["./src/*"],
-      "@root/*": ["../src/*"]
-    },
-    "lib": ["ESNext", "dom"],
-    "types": ["jest", "node"],
-    "typeRoots": [
-      "./src/types",
-      "./node_modules/@types"
-    ]
-  },
-
+  "files": [],
   "references": [
     {
-      "path": "./tsconfig.vite-config.json"
-    }
-  ]
+      "path": "./tsconfig.app.json"
+    },
+    {
+      "path": "./tsconfig.vitest.json"
+    },
+  ],
+  "compilerOptions": {
+    "module": "NodeNext"
+  }
 }

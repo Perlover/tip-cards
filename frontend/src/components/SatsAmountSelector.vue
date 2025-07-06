@@ -1,134 +1,172 @@
 <template>
-  <div class="flex items-start w-full">
-    <div class="flex-1">
-      <input
-        :value="amount"
-        class="w-full border my-1 px-3 py-2 focus:outline-none"
-        type="number"
-        inputmode="decimal"
-        :min="inputMin"
-        :step="inputStep"
-        @input="onInput"
+  <div>
+    <div class="flex items-end w-full">
+      <div class="flex-1">
+        <TextField
+          :model-value="amount"
+          :label="label || $t('general.amount')"
+          class="w-full focus:outline-none"
+          input-class="text-right"
+          type="number"
+          inputmode="decimal"
+          :min="inputMin"
+          :max="inputMax"
+          :step="inputStep"
+          @update:model-value="(value) => onInput(value)"
+        />
+      </div>
+      <button
+        type="button"
+        class="p-4 w-20 h-14 flex items-center gap-2 underline hover:no-underline"
+        :disabled="amountSecondary == null"
+        @click="changeSelectedCurrency"
       >
+        <IconConvert class="flex-none w-5 h-5" />
+        <span>
+          {{ selectedCurrencyDisplay }}
+        </span>
+      </button>
+    </div>
+    <div>
       <small
         class="block text-left text-sm"
-        :class="{ 'invisible': alternateAmount == null }"
+        :class="{ 'invisible': amountSecondary == null }"
       >
-        {{ alternateAmount }} {{ alternateCurrency }}
+        {{ amountSecondary }} {{ secondaryCurrencyDisplay }}
       </small>
     </div>
-    <button
-      type="button"
-      class="p-3"
-      :disabled="alternateAmount == null"
-      @click="changeSelectedCurrency"
-    >
-      {{ selectedCurrency }}
-      <i class="bi bi-arrow-down-up" />
-    </button>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onBeforeMount, watch } from 'vue'
+import { ref, computed, onBeforeMount, watch, type PropType, toRefs } from 'vue'
 
 import formatNumber from '@/modules/formatNumber'
-
-const rateBtcSats = 100 * 1000 * 1000
-
-const selectedCurrency = ref<string>('sats')
-const alternateCurrency = computed(() => selectedCurrency.value === 'EUR' ? 'BTC' : 'EUR')
-const amount = ref<string>()
-
-const alternateAmount = computed(() => {
-  if (props.rateBtcEur == null) {
-    return undefined
-  }
-  if (alternateCurrency.value === 'EUR') {
-    return formatNumber(props.amountSats / rateBtcSats * props.rateBtcEur, 2, 2)
-  }
-  return formatNumber(props.amountSats / rateBtcSats, 8, 8)
-})
-
-const inputStep = computed(() => {
-  if (selectedCurrency.value === 'sats') {
-    return 1
-  }
-  if (selectedCurrency.value === 'EUR') {
-    return 0.01
-  }
-  return 0.00000001
-})
-
-const inputMin = computed(() => {
-  if (selectedCurrency.value === 'sats') {
-    return props.min
-  }
-  if (selectedCurrency.value === 'EUR' && props.rateBtcEur != null && props.rateBtcEur > 0) {
-    return formatNumber(props.min / rateBtcSats * props.rateBtcEur, 2, 2, undefined, 'en')
-  }
-  return props.min / rateBtcSats
-})
+import TextField from '@/components/forms/TextField.vue'
+import IconConvert from './icons/IconConvert.vue'
+import { useAmountConversion, type SelectedCurrency } from '@/modules/useAmountConversion'
 
 const props = defineProps({
   amountSats: {
     type: Number,
     required: true,
   },
-  rateBtcEur: {
+  selectedCurrency: {
+    type: String as PropType<SelectedCurrency>,
+    required: true,
+  },
+  rateBtcFiat: {
     type: Number,
     default: undefined,
+  },
+  fiatCurrency: {
+    type: String,
+    default: 'EUR',
   },
   min: {
     type: Number,
     default: 0,
   },
+  max: {
+    type: Number,
+    default: undefined,
+  },
+  fee: {
+    type: [Number, null],
+    default: null,
+  },
+  label: {
+    type: String,
+    default: undefined,
+  },
 })
 
 const emit = defineEmits([
-  'update',
+  'update:amountSats',
+  'update:selectedCurrency',
 ])
 
-const onInput = (event: Event) => {
-  const { value } = (event.target as HTMLInputElement)
-  amount.value = value
+const rateBtcSats = 100 * 1000 * 1000
+
+const { rateBtcFiat, fiatCurrency, selectedCurrency } = toRefs(props)
+
+const { satsToPrimary, satsToSecondary, selectedCurrencyDisplay, secondaryCurrencyDisplay } = useAmountConversion({
+  fiatCurrency,
+  selectedCurrency,
+  rateBtcFiat,
+})
+
+const initAmount = () => {
+  amount.value = satsToPrimary(props.amountSats, 'en')
+}
+
+const onInput = (value?: number | string) => {
+  if (value == 0) {
+    return
+  }
+  amount.value = String(value)
   let amountSats = 0
-  if (selectedCurrency.value === 'sats') {
+  if (props.selectedCurrency === 'sats') {
     amountSats = Number(value)
   }
-  if (selectedCurrency.value === 'BTC') {
+  if (props.selectedCurrency === 'BTC') {
     amountSats = Number(value) * rateBtcSats
   }
-  if (selectedCurrency.value === 'EUR' && props.rateBtcEur != null && props.rateBtcEur > 0) {
-    amountSats = Number(value) * rateBtcSats / props.rateBtcEur
+  if (props.selectedCurrency === 'fiat' && props.rateBtcFiat != null && props.rateBtcFiat > 0) {
+    amountSats = Number(value) * rateBtcSats / props.rateBtcFiat
   }
-  emit('update', Math.round(amountSats))
+  emit('update:amountSats', Math.round(amountSats))
 }
 
 const changeSelectedCurrency = () => {
-  if (selectedCurrency.value === 'sats') {
-    selectedCurrency.value = 'EUR'
+  if (props.selectedCurrency === 'sats' && props.rateBtcFiat != null && props.rateBtcFiat > 0) {
+    emit('update:selectedCurrency', 'fiat')
     return
   }
-  if (selectedCurrency.value === 'EUR') {
-    selectedCurrency.value = 'BTC'
+  if (props.selectedCurrency === 'sats' || props.selectedCurrency === 'fiat') {
+    emit('update:selectedCurrency', 'BTC')
     return
   }
-  selectedCurrency.value = 'sats'
+  emit('update:selectedCurrency', 'sats')
 }
 
-const initAmount = () => {
-  if (selectedCurrency.value === 'sats') {
-    amount.value = String(props.amountSats)
-    return
+const amount = ref<string>()
+
+const amountSecondary = computed(() => satsToSecondary(props.amountSats))
+
+const inputStep = computed(() => {
+  if (props.selectedCurrency === 'BTC') {
+    return 0.00000001
   }
-  if (selectedCurrency.value === 'EUR' && props.rateBtcEur != null && props.rateBtcEur > 0) {
-    amount.value = formatNumber(props.amountSats / rateBtcSats * props.rateBtcEur, 2, 2, undefined, 'en')
-    return
+  if (props.selectedCurrency === 'fiat') {
+    return 0.01
   }
-  amount.value = formatNumber(props.amountSats / rateBtcSats, 8, 8, undefined, 'en')
-}
+  return 1
+})
+
+const inputMin = computed(() => {
+  if (props.selectedCurrency === 'BTC') {
+    return props.min / rateBtcSats
+  }
+  if (props.selectedCurrency === 'fiat' && props.rateBtcFiat != null && props.rateBtcFiat > 0) {
+    return formatNumber(props.min / rateBtcSats * props.rateBtcFiat, 2, 2, undefined, 'en')
+  }
+  return props.min
+})
+
+const inputMax = computed(() => {
+  if (props.max == null) {
+    return undefined
+  }
+  if (props.selectedCurrency === 'BTC') {
+    return props.max / rateBtcSats
+  }
+  if (props.selectedCurrency === 'fiat' && props.rateBtcFiat != null && props.rateBtcFiat > 0) {
+    return formatNumber(props.max / rateBtcSats * props.rateBtcFiat, 2, 2, undefined, 'en')
+  }
+  return props.max
+})
 
 onBeforeMount(initAmount)
-watch(selectedCurrency, initAmount)
+watch(() => props.selectedCurrency, initAmount)
 </script>

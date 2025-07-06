@@ -1,0 +1,24 @@
+<template>
+  <svg
+    viewBox="0 0 16.8 16.1"
+    xmlns="http://www.w3.org/2000/svg"
+    width="100%"
+    height="100%"
+    stroke="currentColor"
+  >
+    <line
+      x1="1.5"
+      y1="1.5"
+      x2="15.3"
+      y2="14.6"
+      stroke-width="3"
+    />
+    <line
+      x1="1.5"
+      y1="14.6"
+      x2="15.3"
+      y2="1.5"
+      stroke-width="3"
+    />
+  </svg>
+</template>

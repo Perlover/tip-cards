@@ -1,20 +1,34 @@
 import axios from 'axios'
+import z from 'zod'
 
-import type { Card, CardStatus, CardStatusStatus } from '@root/data/Card'
+import type { Card } from '@shared/data/api/Card'
+import LNURL from '@shared/modules/LNURL/LNURL'
 
-import { encodeLnurl, decodeLnurl } from '@/modules//lnurlHelpers'
 import { BACKEND_API_ORIGIN, LNBITS_ORIGIN } from '@/constants'
 
-/**
- * @param cardHash
- * @param origin
- * @throws
- */
-export const loadCard = async (cardHash: string, origin: string | undefined = undefined): Promise<Card> => {
-  let url = `${BACKEND_API_ORIGIN}/api/card/${cardHash}`
-  if (origin != null) {
-    url = `${url}?origin=${origin}`
-  }
+export const CardStatusEnum = z.enum([
+  'unfunded',
+  'invoiceFunding', 'lnurlpFunding', 'lnurlpSharedFunding', 'setInvoiceFunding',
+  'invoiceExpired', 'lnurlpExpired', 'lnurlpSharedExpiredEmpty', 'lnurlpSharedExpiredFunded', 'setInvoiceExpired',
+  'funded',
+  'withdrawPending', 'recentlyWithdrawn', 'withdrawn',
+])
+
+export type CardStatusEnum = z.infer<typeof CardStatusEnum>
+
+export const CardStatus = z.object({
+  lnurl: z.string(),
+  status: CardStatusEnum,
+  amount: z.number().nullable().default(null),
+  createdDate: z.number().nullable().default(null),
+  fundedDate: z.number().nullable().default(null),
+  withdrawnDate: z.number().nullable().default(null),
+})
+
+export type CardStatus = z.infer<typeof CardStatus>
+
+export const loadCard = async (cardHash: string): Promise<Card> => {
+  const url = `${BACKEND_API_ORIGIN}/api/card/${cardHash}`
   try {
     const response = await axios.get(
       url,
@@ -35,6 +49,12 @@ export const loadCard = async (cardHash: string, origin: string | undefined = un
         lnurlp: null,
         lnbitsWithdrawId: null,
         used: null,
+        text: '',
+        note: '',
+        setFunding: null,
+        landingPageViewed: null,
+        isLockedByBulkWithdraw: false,
+        withdrawPending: false,
       }
     }
     console.error(error)
@@ -43,7 +63,7 @@ export const loadCard = async (cardHash: string, origin: string | undefined = un
 }
 
 /**
- * @deprecated use @root/data/Card/CardStatus instead
+ * @deprecated use @shared/data/Card/CardStatus instead
  */
 export type CardStatusDeprecated = {
   status: 'error' | 'unfunded' | 'funded' | 'used' | 'invoice' | 'lnurlp' | 'setFunding'
@@ -58,7 +78,7 @@ export type CardStatusDeprecated = {
 export const loadCardStatusForLnurl = async (lnurl: string): Promise<CardStatusDeprecated> => {
   let lnurlDecoded: URL
   try {
-    lnurlDecoded = new URL(decodeLnurl(lnurl))
+    lnurlDecoded = new URL(LNURL.decode(lnurl))
   } catch (error) {
     console.error(error)
     return {
@@ -85,14 +105,14 @@ export const loadCardStatusForLnurl = async (lnurl: string): Promise<CardStatusD
   return loadCardStatus(cardHashMatch[1])
 }
 
-export const loadCardStatus = async (cardHash: string, origin: string | undefined = undefined): Promise<CardStatusDeprecated> => {
+export const loadCardStatus = async (cardHash: string): Promise<CardStatusDeprecated> => {
   let card: Card | null
   try {
-    card = await loadCard(cardHash, origin)
-  } catch (error) {
+    card = await loadCard(cardHash)
+  } catch {
     return {
       status: 'error',
-      message: 'Unable to load the Tip Card status as the server is currently not reachable. Please try again later.',
+      message: 'Unable to load the TipCard status as the server is currently not reachable. Please try again later.',
     }
   }
   if (card == null) {
@@ -120,7 +140,7 @@ export const loadCardStatus = async (cardHash: string, origin: string | undefine
     createdDate = card.setFunding.created
     fundedDate = card.setFunding.paid != null ? card.setFunding.paid : undefined
   }
-  
+
   if (card.used != null) {
     return {
       status: 'used',
@@ -131,7 +151,7 @@ export const loadCardStatus = async (cardHash: string, origin: string | undefine
       card,
     }
   }
-  if (card.lnbitsWithdrawId != null) {
+  if (card.lnbitsWithdrawId != null || card.isLockedByBulkWithdraw) {
     return {
       status: 'funded',
       amount,
@@ -139,7 +159,7 @@ export const loadCardStatus = async (cardHash: string, origin: string | undefine
       createdDate,
       fundedDate,
       card,
-    }  
+    }
   }
   if (card.invoice != null && card.invoice.paid == null) {
     return {
@@ -173,30 +193,31 @@ export const loadCardStatus = async (cardHash: string, origin: string | undefine
   }
   return {
     status: 'unfunded',
+    fundedDate,
     card,
   }
 }
 
 export const getCardStatusForCard = (card: Card): CardStatus => {
   const lnurlDecoded = `${BACKEND_API_ORIGIN}/api/lnurl/${card.cardHash}`
-  const lnurl = encodeLnurl(lnurlDecoded)
+  const lnurl = LNURL.encode(lnurlDecoded)
 
-  let status: CardStatusStatus = 'unfunded'
-  let amount
-  let createdDate
-  let fundedDate
-  let withdrawnDate
+  let status: CardStatusEnum = CardStatusEnum.enum.unfunded
+  let amount: number | null = null
+  let createdDate: number | null = null
+  let fundedDate: number | null = null
+  let withdrawnDate: number | null = null
 
   if (card.invoice != null) {
     status = card.invoice.expired ? 'invoiceExpired' : 'invoiceFunding'
     amount = card.invoice.amount
     createdDate = card.invoice.created
-    fundedDate = card.invoice.paid != null ? card.invoice.paid : undefined
+    fundedDate = card.invoice.paid != null ? card.invoice.paid : null
   } else if (card.lnurlp != null) {
     status = card.lnurlp.expired ? 'lnurlpExpired' : 'lnurlpFunding'
-    amount = card.lnurlp.amount != null ? card.lnurlp.amount : undefined
+    amount = card.lnurlp.amount != null ? card.lnurlp.amount : null
     createdDate = card.lnurlp.created
-    fundedDate = card.lnurlp.paid != null ? card.lnurlp.paid : undefined
+    fundedDate = card.lnurlp.paid != null ? card.lnurlp.paid : null
     if (card.lnurlp.shared) {
       status = card.lnurlp.expired
         ? amount != null && amount > 0 ? 'lnurlpSharedExpiredFunded' : 'lnurlpSharedExpiredEmpty'
@@ -206,7 +227,7 @@ export const getCardStatusForCard = (card: Card): CardStatus => {
     status = card.setFunding.expired ? 'setInvoiceExpired' : 'setInvoiceFunding'
     amount = card.setFunding.amount
     createdDate = card.setFunding.created
-    fundedDate = card.setFunding.paid != null ? card.setFunding.paid : undefined
+    fundedDate = card.setFunding.paid != null ? card.setFunding.paid : null
   }
 
   if (fundedDate != null) {

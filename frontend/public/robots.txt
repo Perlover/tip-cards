@@ -2,6 +2,7 @@ User-agent: *
 Allow: /
 
 Disallow: /statistics
+Disallow: /style-guide
 
 Disallow: /api
 Disallow: /preview/?lightning=
@@ -12,3 +13,9 @@ Allow: /funding/$
 
 Disallow: /cards/
 Allow: /cards/$
+
+Disallow: /funding/
+Disallow: /set-funding/
+Disallow: /set-printing/
+Disallow: /bulk-withdraw/
+Disallow: /card/

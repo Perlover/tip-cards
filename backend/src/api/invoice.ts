@@ -1,295 +1,354 @@
 import axios from 'axios'
-import express from 'express'
+import { Router, type Request, type Response, type NextFunction } from 'express'
 
-import { getCardByHash, createCard, deleteCard } from '../services/database'
-import { checkIfCardIsPaidAndCreateWithdrawId, checkIfCardIsUsed } from '../services/lnbitsHelpers'
-import { TIPCARDS_ORIGIN, TIPCARDS_API_ORIGIN, LNBITS_INVOICE_READ_KEY, LNBITS_ORIGIN } from '../constants'
+import type { Card as CardApi } from '@shared/data/api/Card.js'
+import { ErrorCode, ErrorWithCode, type ToErrorResponse } from '@shared/data/Errors.js'
+import { getLandingPageLinkForCardHash } from '@shared/modules/cardUrlHelpers.js'
+import { calculateFeeForCard } from '@shared/modules/feeCalculation.js'
 
-import type { Card } from '../../../src/data/Card'
-import { ErrorCode, ErrorWithCode } from '../../../src/data/Errors'
-import { getLandingPageLinkForCardHash } from '../../../src/modules/lnurlHelpers'
+import { cardApiFromCardRedis } from '@backend/database/deprecated/transforms/cardApiFromCardRedis.js'
+import { cardRedisFromCardApi } from '@backend/database/deprecated/transforms/cardRedisFromCardApi.js'
+import { getCardByHash, createCard, deleteCard } from '@backend/database/deprecated/queries.js'
+import ApplicationEventEmitter from '@backend/domain/ApplicationEventEmitter.js'
+import CardLockManager from '@backend/domain/CardLockManager.js'
+import { checkIfCardIsPaidAndCreateWithdrawId, checkIfCardIsUsed } from '@backend/services/lnbitsHelpers.js'
+import { TIPCARDS_ORIGIN, TIPCARDS_API_ORIGIN, LNBITS_INVOICE_READ_KEY, LNBITS_ORIGIN } from '@backend/constants.js'
 
-const router = express.Router()
+import { emitCardUpdateForSingleCard } from './middleware/emitCardUpdates.js'
+import { lockCardMiddleware, releaseCardMiddleware } from './middleware/handleCardLock.js'
 
-router.post('/create/:cardHash', async (req: express.Request, res: express.Response) => {
-  // amount in sats
-  let amount: number | undefined = undefined
-  let text = ''
-  let note = ''
-  try {
-    ({ amount, text, note } = req.body)
-  } catch (error) {
-    console.error(error)
-  }
-  if (amount == null || amount < 100) {
-    res.status(400).json({
-      status: 'error',
-      message: 'Invalid input.',
-    })
-    return
-  }
+export default (
+  applicationEventEmitter: ApplicationEventEmitter,
+  cardLockManager: CardLockManager,
+) => {
+  const router = Router()
 
-  // check if card/invoice already exists
-  let card: Card | null = null
-  try {
-    card = await getCardByHash(req.params.cardHash)
-  } catch (error) {
-    console.error(ErrorCode.UnknownDatabaseError, error)
-    res.status(500).json({
-      status: 'error',
-      message: 'An unexpected error occured. Please try again later or contact an admin.',
-      code: ErrorCode.UnknownDatabaseError,
-    })
-    return
-  }
-  if (card?.invoice != null) {
-    if (card.invoice.paid) {
-      res.status(400).json({
-        status: 'error',
+  const toErrorResponse: ToErrorResponse = ({ message, code }) => ({
+    status: 'error',
+    message,
+    code,
+  })
+
+  router.post('/create/:cardHash', lockCardMiddleware(toErrorResponse, cardLockManager), async (req, res, next) => {
+    // amount in sats
+    let amount: number | undefined = undefined
+    let text = ''
+    let note = ''
+    try {
+      amount = req.body.amount
+      text = req.body.text || ''
+      note = req.body.note || ''
+    } catch (error) {
+      console.error(error)
+    }
+    if (amount == null || amount < 200 || amount > 2200000) {
+      res.status(400).json(toErrorResponse({
+        message: 'Invalid amount, has to be between 210 and 2,100,000 sats.',
+      }))
+      next()
+      return
+    }
+
+    // calculate fee
+    const feeAmount = calculateFeeForCard(amount)
+    const totalAmount = amount + feeAmount
+
+    // check if card/invoice already exists
+    let card: CardApi | null = null
+    try {
+      const cardRedis = await getCardByHash(req.params.cardHash)
+      if (cardRedis != null) {
+        card = cardApiFromCardRedis(cardRedis)
+      }
+    } catch (error) {
+      console.error(ErrorCode.UnknownDatabaseError, error)
+      res.status(500).json(toErrorResponse({
+        message: 'An unexpected error occured. Please try again later or contact an admin.',
+        code: ErrorCode.UnknownDatabaseError,
+      }))
+      next()
+      return
+    }
+    if (card?.invoice != null) {
+      if (card.invoice.paid) {
+        res.status(400).json(toErrorResponse({
+          message: 'Card is already funded.',
+        }))
+      } else if (card.invoice.amount === amount) {
+        res.json({
+          status: 'success',
+          data: card.invoice.payment_request,
+        })
+      } else {
+        res.status(400).json(toErrorResponse({
+          message: `Card already exists with different amount: ${card.invoice.amount}.`,
+        }))
+      }
+      next()
+      return
+    }
+    if (card?.lnurlp?.paid != null) {
+      res.status(400).json(toErrorResponse({
         message: 'Card is already funded.',
+      }))
+      next()
+      return
+    }
+    if (card?.setFunding != null) {
+      res.status(400).json(toErrorResponse({
+        message: 'A set-invoice for this card already exists.',
+      }))
+      next()
+      return
+    }
+
+    // create invoice in lnbits
+    let payment_hash: string | undefined = undefined
+    let payment_request: string | undefined = undefined
+    try {
+      const response = await axios.post(`${LNBITS_ORIGIN}/api/v1/payments`, {
+        out: false,
+        amount: totalAmount,
+        memo: 'Fund your Lightning TipCard',
+        webhook: `${TIPCARDS_API_ORIGIN}/api/invoice/paid/${req.params.cardHash}`,
+      }, {
+        headers: {
+          'Content-type': 'application/json',
+          'X-Api-Key': LNBITS_INVOICE_READ_KEY,
+        },
       })
-    } else if (card.invoice.amount === amount) {
+      ;({ payment_hash, payment_request } = response.data)
+    } catch (error) {
+      console.error(ErrorCode.UnableToCreateLnbitsInvoice, error)
+    }
+    if (payment_hash == null || payment_request == null) {
+      res.status(500).json(toErrorResponse({
+        message: 'Unable to create invoice at lnbits.',
+        code: ErrorCode.UnableToCreateLnbitsInvoice,
+      }))
+      next()
+      return
+    }
+
+    // persist data
+    try {
+      await createCard({
+        cardHash: req.params.cardHash,
+        text,
+        note,
+        invoice: {
+          amount,
+          feeAmount,
+          payment_hash,
+          payment_request,
+          created: Math.round(+ new Date() / 1000),
+          paid: null,
+        },
+        lnurlp: null,
+        setFunding: null,
+        lnbitsWithdrawId: null,
+        landingPageViewed: null,
+        isLockedByBulkWithdraw: false,
+        used: null,
+      })
+    } catch (error) {
+      console.error(ErrorCode.UnknownDatabaseError, error)
+      res.status(500).json(toErrorResponse({
+        message: 'An unexpected error occured. Please try again later or contact an admin.',
+        code: ErrorCode.UnknownDatabaseError,
+      }))
+      next()
+      return
+    }
+    res.json({
+      status: 'success',
+      data: payment_request,
+    })
+    next()
+  }, releaseCardMiddleware)
+
+  const invoicePaid = async (req: Request, res: Response, next: NextFunction) => {
+    // 1. check if card exists
+    let card: CardApi | null = null
+    try {
+      const cardRedis = await getCardByHash(req.params.cardHash)
+      if (cardRedis != null) {
+        card = cardApiFromCardRedis(cardRedis)
+      }
+    } catch (error) {
+      console.error(ErrorCode.UnknownDatabaseError, error)
+      res.status(500).json(toErrorResponse({
+        message: 'An unexpected error occured. Please try again later or contact an admin.',
+        code: ErrorCode.UnknownDatabaseError,
+      }))
+      next()
+      return
+    }
+    if (card == null) {
+      res.status(404).json(toErrorResponse({
+        message: `Card not found. Go to ${getLandingPageLinkForCardHash(TIPCARDS_ORIGIN, req.params.cardHash)} to fund it.`,
+      }))
+      next()
+      return
+    }
+    if (card.invoice == null) {
+      res.status(404).json(toErrorResponse({
+        message: `Card has no funding invoice. Go to ${getLandingPageLinkForCardHash(TIPCARDS_ORIGIN, req.params.cardHash)} to fund it.`,
+      }))
+      next()
+      return
+    }
+
+    // 2. check if card already has withdrawId
+    if (card.lnbitsWithdrawId != null) {
       res.json({
         status: 'success',
-        data: card.invoice.payment_request,
+        data: 'paid',
       })
-    } else {
-      res.status(400).json({
-        status: 'error',
-        message: `Card already exists with different amount: ${card.invoice.amount}.`,
-      })
+      next()
+      return
     }
-    return
-  }
-  if (card?.lnurlp?.paid != null) {
-    res.status(400).json({
-      status: 'error',
-      message: 'Card is already funded.',
-    })
-    return
-  }
 
-  // create invoice in lnbits
-  let payment_hash: string | undefined = undefined
-  let payment_request: string | undefined = undefined
-  try {
-    const response = await axios.post(`${LNBITS_ORIGIN}/api/v1/payments`, {
-      out: false,
-      amount,
-      memo: 'Fund your Lightning Tip Card',
-      webhook: `${TIPCARDS_API_ORIGIN}/api/invoice/paid/${req.params.cardHash}`,
-    }, {
-      headers: {
-        'Content-type': 'application/json',
-        'X-Api-Key': LNBITS_INVOICE_READ_KEY,
-      },
-    })
-    ;({ payment_hash, payment_request } = response.data)
-  } catch (error) {
-    console.error(ErrorCode.UnableToCreateLnbitsInvoice, error)
-  }
-  if (payment_hash == null || payment_request == null) {
-    res.status(500).json({
-      status: 'error',
-      message: 'Unable to create invoice at lnbits.',
-      code: ErrorCode.UnableToCreateLnbitsInvoice,
-    })
-    return
-  }
-
-  // persist data
-  try {
-    await createCard({
-      cardHash: req.params.cardHash,
-      text,
-      note,
-      invoice: {
-        amount,
-        payment_hash,
-        payment_request,
-        created: Math.round(+ new Date() / 1000),
-        paid: null,
-      },
-      lnurlp: null,
-      lnbitsWithdrawId: null,
-      used: null,
-    })
-  } catch (error) {
-    console.error(ErrorCode.UnknownDatabaseError, error)
-    res.status(500).json({
-      status: 'error',
-      message: 'An unexpected error occured. Please try again later or contact an admin.',
-      code: ErrorCode.UnknownDatabaseError,
-    })
-    return
-  }
-  res.json({
-    status: 'success',
-    data: payment_request,
-  })
-})
-
-const invoicePaid = async (req: express.Request, res: express.Response) => {
-  // 1. check if card exists
-  let card: Card | null = null
-  try {
-    card = await getCardByHash(req.params.cardHash)
-  } catch (error) {
-    console.error(ErrorCode.UnknownDatabaseError, error)
-    res.status(500).json({
-      status: 'error',
-      message: 'An unexpected error occured. Please try again later or contact an admin.',
-      code: ErrorCode.UnknownDatabaseError,
-    })
-    return
-  }
-  if (card == null) {
-    res.status(404).json({
-      status: 'error',
-      message: `Card not found. Go to ${getLandingPageLinkForCardHash(TIPCARDS_ORIGIN, req.params.cardHash)} to fund it.`,
-    })
-    return
-  }
-  if (card.invoice == null) {
-    res.status(404).json({
-      status: 'error',
-      message: `Card has no funding invoice. Go to ${getLandingPageLinkForCardHash(TIPCARDS_ORIGIN, req.params.cardHash)} to fund it.`,
-    })
-    return
-  }
-
-  // 2. check if card already has withdrawId
-  if (card.lnbitsWithdrawId != null) {
+    // 3. check if invoice of card is paid and create withdrawId
+    try {
+      await checkIfCardIsPaidAndCreateWithdrawId(card)
+    } catch (error: unknown) {
+      let code = ErrorCode.UnknownErrorWhileCheckingInvoiceStatus
+      let errorToLog = error
+      if (error instanceof ErrorWithCode) {
+        code = error.code
+        errorToLog = error.error
+      }
+      console.error(code, errorToLog)
+      res.status(500).json(toErrorResponse({
+        message: 'Unable to check invoice status at lnbits.',
+        code,
+      }))
+      next()
+      return
+    }
+    if (!card.invoice.paid) {
+      res.json({
+        status: 'success',
+        data: 'not_paid',
+      })
+      next()
+      return
+    }
     res.json({
       status: 'success',
       data: 'paid',
     })
-    return
+    next()
   }
+  router.get(
+    '/paid/:cardHash',
+    lockCardMiddleware(toErrorResponse, cardLockManager),
+    invoicePaid,
+    releaseCardMiddleware,
+    emitCardUpdateForSingleCard(applicationEventEmitter),
+  )
+  router.post(
+    '/paid/:cardHash',
+    lockCardMiddleware(toErrorResponse, cardLockManager),
+    invoicePaid,
+    releaseCardMiddleware,
+    emitCardUpdateForSingleCard(applicationEventEmitter),
+  )
 
-  // 3. check if invoice of card is paid and create withdrawId
-  try {
-    await checkIfCardIsPaidAndCreateWithdrawId(card)
-  } catch (error: unknown) {
-    let code = ErrorCode.UnknownErrorWhileCheckingInvoiceStatus
-    let errorToLog = error
-    if (error instanceof ErrorWithCode) {
-      code = error.code
-      errorToLog = error.error
+  router.delete('/delete/:cardHash', async (req, res) => {
+    // 1. check if card exists
+    let card: CardApi | null = null
+    try {
+      const cardRedis = await getCardByHash(req.params.cardHash)
+      if (cardRedis != null) {
+        card = cardApiFromCardRedis(cardRedis)
+      }
+    } catch (error) {
+      console.error(ErrorCode.UnknownDatabaseError, error)
+      res.status(500).json(toErrorResponse({
+        message: 'An unexpected error occured. Please try again later or contact an admin.',
+        code: ErrorCode.UnknownDatabaseError,
+      }))
+      return
     }
-    console.error(code, errorToLog)
-    res.status(500).json({
-      status: 'error',
-      message: 'Unable to check invoice status at lnbits.',
-      code,
-    })
-    return
-  }
-  if (!card.invoice.paid) {
+    if (card == null) {
+      res.status(404).json(toErrorResponse({
+        message: `Card not found. Go to ${getLandingPageLinkForCardHash(TIPCARDS_ORIGIN, req.params.cardHash)} to fund it.`,
+      }))
+      return
+    }
+
+    // 2. check if card is locked
+    if (card.isLockedByBulkWithdraw) {
+      res.status(400).json(toErrorResponse({
+        message: 'This card is locked by bulk withdraw!',
+      }))
+      return
+    }
+
+    // 3. check if invoice is already paid and used
+    try {
+      await checkIfCardIsPaidAndCreateWithdrawId(card)
+    } catch (error: unknown) {
+      let code = ErrorCode.UnknownErrorWhileCheckingInvoiceStatus
+      let errorToLog = error
+      if (error instanceof ErrorWithCode) {
+        code = error.code
+        errorToLog = error.error
+      }
+      console.error(code, errorToLog)
+      res.status(500).json(toErrorResponse({
+        message: 'Unable to check invoice status at lnbits.',
+        code,
+      }))
+      return
+    }
+    try {
+      await checkIfCardIsUsed(card)
+    } catch (error: unknown) {
+      let code = ErrorCode.UnknownErrorWhileCheckingWithdrawStatus
+      let errorToLog = error
+      if (error instanceof ErrorWithCode) {
+        code = error.code
+        errorToLog = error.error
+      }
+      console.error(code, errorToLog)
+      res.status(500).json(toErrorResponse({
+        message: 'Unable to check withdraw status at lnbits.',
+        code,
+      }))
+      return
+    }
+    if (card.lnbitsWithdrawId != null && card.used == null) {
+      res.status(400).json(toErrorResponse({
+        message: 'This card is funded and not used. Withdraw satoshis first!',
+      }))
+      return
+    }
+    if (card.lnurlp?.amount != null && card.lnurlp?.amount > 0 && card.used == null) {
+      res.status(400).json(toErrorResponse({
+        message: 'This card is funded and not used. Withdraw satoshis first!',
+        code: ErrorCode.CardFundedAndNotUsed,
+      }))
+      return
+    }
+
+    // 4. delete card in database
+    try {
+      await deleteCard(cardRedisFromCardApi(card))
+    } catch (error) {
+      console.error(ErrorCode.UnknownDatabaseError, error)
+      res.status(500).json(toErrorResponse({
+        message: 'An unexpected error occured. Please try again later or contact an admin.',
+        code: ErrorCode.UnknownDatabaseError,
+      }))
+      return
+    }
     res.json({
       status: 'success',
-      data: 'not_paid',
     })
-    return
-  }
-  res.json({
-    status: 'success',
-    data: 'paid',
   })
+
+  return router
 }
-
-router.get('/paid/:cardHash', invoicePaid)
-router.post('/paid/:cardHash', invoicePaid)
-
-router.delete('/delete/:cardHash', async (req: express.Request, res: express.Response) => {
-  // 1. check if card exists
-  let card: Card | null = null
-  try {
-    card = await getCardByHash(req.params.cardHash)
-  } catch (error) {
-    console.error(ErrorCode.UnknownDatabaseError, error)
-    res.status(500).json({
-      status: 'error',
-      message: 'An unexpected error occured. Please try again later or contact an admin.',
-      code: ErrorCode.UnknownDatabaseError,
-    })
-    return
-  }
-  if (card == null) {
-    res.status(404).json({
-      status: 'error',
-      message: `Card not found. Go to ${getLandingPageLinkForCardHash(TIPCARDS_ORIGIN, req.params.cardHash)} to fund it.`,
-    })
-    return
-  }
-
-  // 2. check if invoice is already paid and used
-  try {
-    await checkIfCardIsPaidAndCreateWithdrawId(card)
-  } catch (error: unknown) {
-    let code = ErrorCode.UnknownErrorWhileCheckingInvoiceStatus
-    let errorToLog = error
-    if (error instanceof ErrorWithCode) {
-      code = error.code
-      errorToLog = error.error
-    }
-    console.error(code, errorToLog)
-    res.status(500).json({
-      status: 'error',
-      message: 'Unable to check invoice status at lnbits.',
-      code,
-    })
-    return
-  }
-  try {
-    await checkIfCardIsUsed(card)
-  } catch (error: unknown) {
-    let code = ErrorCode.UnknownErrorWhileCheckingWithdrawStatus
-    let errorToLog = error
-    if (error instanceof ErrorWithCode) {
-      code = error.code
-      errorToLog = error.error
-    }
-    console.error(code, errorToLog)
-    res.status(500).json({
-      status: 'error',
-      message: 'Unable to check withdraw status at lnbits.',
-      code,
-    })
-    return
-  }
-  if (card.lnbitsWithdrawId != null && card.used == null) {
-    res.status(400).json({
-      status: 'error',
-      message: 'This card is funded and not used. Withdraw satoshis first!',
-      code: ErrorCode.CardFundedAndNotUsed,
-    })
-    return
-  }
-  if (card.lnurlp?.amount != null && card.lnurlp?.amount > 0 && card.used == null) {
-    res.status(400).json({
-      status: 'error',
-      message: 'This card is funded and not used. Withdraw satoshis first!',
-      code: ErrorCode.CardFundedAndNotUsed,
-    })
-    return
-  }
-
-  // 4. delete card in database
-  try {
-    await deleteCard(card)
-  } catch (error) {
-    console.error(ErrorCode.UnknownDatabaseError, error)
-    res.status(500).json({
-      status: 'error',
-      message: 'An unexpected error occured. Please try again later or contact an admin.',
-      code: ErrorCode.UnknownDatabaseError,
-    })
-    return
-  }
-  res.json({
-    status: 'success',
-  })
-})
-
-export default router

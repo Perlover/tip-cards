@@ -1,13 +1,29 @@
+import { watch } from 'vue'
 import { useRoute } from 'vue-router'
 
-import i18n from '@/modules/initI18n'
+import { useI18nHelpers } from '@/modules/initI18n'
 import { DEFAULT_DOCUMENT_TITLE, CANONICAL_URL_ORIGIN } from '@/constants'
 
 export const useSeoHelpers = () => {
   const route = useRoute()
+  const { currentLocale, currentTextDirection } = useI18nHelpers()
 
-  const setHeaderSeo = () => {
-    document.documentElement.setAttribute('lang', i18n.global.locale.value)
+  const initHtmlSeoWatchers = () => {
+    watch(currentLocale, (value) => {
+      document.documentElement.setAttribute('lang', value)
+    })
+
+    watch(currentTextDirection, (value) => {
+      document.documentElement.setAttribute('dir', value)
+    })
+
+    watch(route, () => {
+      updateCanonicalUrl()
+      setDocumentTitle()
+    })
+  }
+
+  const updateCanonicalUrl = () => {
     if (CANONICAL_URL_ORIGIN != null) {
       document.head.querySelector('link[rel="canonical"]')?.setAttribute('href', `${CANONICAL_URL_ORIGIN}${route.fullPath}`)
     }
@@ -27,7 +43,7 @@ export const useSeoHelpers = () => {
   }
 
   return {
-    setHeaderSeo,
     setDocumentTitle,
+    initHtmlSeoWatchers,
   }
 }

@@ -15,7 +15,7 @@
     v-if="!disabled && (content != null || $slots.content != null)"
     ref="tooltip"
     role="tooltip"
-    class="tooltip absolute z-50 bg-grey-light max-w-[min(24rem,calc(100vw-(100vw-100%)-16px))] border border-grey p-3 rounded-lg opacity-0 transition-opacity pointer-events-none text-sm"
+    class="tooltip absolute z-50 bg-white max-w-[min(24rem,calc(100vw-(100vw-100%)-16px))] border border-grey-medium p-3 shadow-default opacity-0 transition-opacity pointer-events-none text-sm"
     :class="{ 'opacity-100 pointer-events-auto': show }"
     :data-popper-placement="placement"
     @focusin="showTooltip"
@@ -30,7 +30,7 @@
         absolute w-3 h-3 bg-inherit invisible
         before:absolute before:w-3 before:h-3 before:bg-inherit
         before:visible before:rotate-45
-        before:border before:border-grey
+        before:border before:border-grey-medium
       "
       data-popper-arrow
     />
@@ -38,7 +38,7 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, ref, type PropType, onUnmounted, nextTick, watch } from 'vue'
+import { onMounted, ref, useTemplateRef, type PropType, onUnmounted, nextTick, watch } from 'vue'
 // import Popper from 'vue3-popper'
 import { createPopper, type Instance, type ModifierArguments, type Placement } from '@popperjs/core'
 
@@ -63,8 +63,8 @@ const props = defineProps({
 
 const show = ref(false)
 
-const trigger = ref<HTMLElement | null>(null)
-const tooltip = ref<HTMLElement | null>(null)
+const trigger = useTemplateRef('trigger')
+const tooltip = useTemplateRef('tooltip')
 
 let popperInstance: Instance
 
@@ -113,9 +113,25 @@ const destroyPopper = () => {
   popperInstance.destroy()
 }
 
-onMounted(initPopper)
+const onDocumentTouch = (event: TouchEvent) => {
+  if (event.target instanceof Node && trigger.value?.contains(event.target)) {
+    return
+  }
+  if (trigger.value !== document.activeElement) {
+    return
+  }
+  trigger.value?.blur()
+}
 
-onUnmounted(destroyPopper)
+onMounted(() => {
+  initPopper()
+  document.addEventListener('touchstart', onDocumentTouch)
+})
+
+onUnmounted(() => {
+  destroyPopper()
+  document.removeEventListener('touchstart', onDocumentTouch)
+})
 
 const showTooltip = () => {
   // Make the tooltip visible

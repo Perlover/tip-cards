@@ -1,0 +1,39 @@
+build-backend:
+  stage: build
+  rules:
+    - !reference [.shared_config, rules, no_tags]
+    - !reference [.shared_config, rules, web_and_push]
+    - when: on_success
+  cache:
+    - !reference [.shared_config, cache, node_modules]
+    - !reference [.shared_config, cache, env_backend]
+  artifacts:
+    name: "backend-$CI_COMMIT_REF_SLUG"
+    paths:
+      - dist
+  script:
+    - npm run backend-build
+    - cp -r backend/database dist/backend/.
+    - cp -r node_modules dist/.
+    - cp backend/deploy/package.json dist/.
+    - cp backend/deploy/ecosystem.config.cjs dist/.
+    - if [ -f backend/.env ]; then cp backend/.env dist/.; fi
+    - if [ -f backend/.env.local ]; then cp backend/.env.local dist/.; fi
+
+build-frontend:
+  stage: build
+  rules:
+    - !reference [.shared_config, rules, no_tags]
+    - !reference [.shared_config, rules, web_and_push]
+    - when: on_success
+  cache:
+    - !reference [.shared_config, cache, node_modules]
+    - !reference [.shared_config, cache, env_frontend]
+  artifacts:
+    name: "frontend-$CI_COMMIT_REF_SLUG"
+    paths:
+      - dist/frontend
+  script:
+    - npm run frontend-build
+    - VITE_BUILD_LIBS=1 npm run frontend-build
+    - cp dist/frontend/externalCardStatus.umd.cjs dist/frontend/externalCardStatus.umd.js

@@ -1,7 +1,8 @@
 <template>
   <LinkDefault
     v-if="!recentlyCopied"
-    class="inline-block animate-fade-in"
+    class="inline-block"
+    :class="{ 'animate-fade-in': !disabled }"
     :disabled="disabled"
     @click="copyToClipboard(text)"
   >
@@ -51,6 +52,10 @@ const recentlyCopied = ref<boolean>(false)
 const copyToClipboard = async (text: string) => {
   if (props.error != null) {
     alert(props.error)
+    return
+  }
+  if (!navigator.clipboard) {
+    prompt('Clipboard API not available due to missing https.\nThis is the text you attempted to copy:', text)
     return
   }
   await navigator.clipboard.writeText(text)

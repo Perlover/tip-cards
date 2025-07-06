@@ -1,103 +1,122 @@
-import express from 'express'
+import { Router, type Request, type Response, type NextFunction } from 'express'
 
-import { getCardByHash, updateCard } from '../services/database'
-import { checkIfCardIsPaidAndCreateWithdrawId, checkIfCardIsUsed } from '../services/lnbitsHelpers'
-import type { Card } from '../../../src/data/Card'
-import { ErrorCode, ErrorWithCode } from '../../../src/data/Errors'
+import type { Card as CardApi } from '@shared/data/api/Card.js'
+import { ErrorCode, ErrorWithCode, type ToErrorResponse } from '@shared/data/Errors.js'
 
-const router = express.Router()
+import { cardApiFromCardRedis } from '@backend/database/deprecated/transforms/cardApiFromCardRedis.js'
+import { getCardByHash } from '@backend/database/deprecated/queries.js'
+import ApplicationEventEmitter from '@backend/domain/ApplicationEventEmitter.js'
+import CardLockManager from '@backend/domain/CardLockManager.js'
+import { checkIfCardIsPaidAndCreateWithdrawId, checkIfCardIsUsed } from '@backend/services/lnbitsHelpers.js'
 
-router.get('/:cardHash', async (req: express.Request, res: express.Response) => {
-  let card: Card | null = null
+import { emitCardUpdateForSingleCard } from './middleware/emitCardUpdates.js'
+import { lockCardMiddleware, releaseCardMiddleware } from './middleware/handleCardLock.js'
 
-  // load card from database
-  try {
-    card = await getCardByHash(req.params.cardHash)
-  } catch (error: unknown) {
-    console.error(ErrorCode.UnknownDatabaseError, error)
-    res.status(500).json({
-      status: 'error',
-      reason: 'Unknown database error.',
-      code: ErrorCode.UnknownDatabaseError,
-    })
-    return
-  }
-  if (card == null) {
-    res.status(404).json({
-      status: 'error',
-      reason: 'Card has not been funded yet. Scan the QR code with your QR code scanner and open the URL in your browser to fund it.',
-      code: ErrorCode.CardByHashNotFound,
-    })
-    return
-  }
+export default (
+  applicationEventEmitter: ApplicationEventEmitter,
+  cardLockManager: CardLockManager,
+) => {
+  const router = Router()
 
-  // check if invoice is already paid and get withdrawId
-  if (card.lnbitsWithdrawId == null) {
+  const toErrorResponse: ToErrorResponse = ({ message, code }) => ({
+    status: 'error',
+    message,
+    code,
+  })
+
+  const routeHandler = async (req: Request, res: Response, next: NextFunction) => {
+    let card: CardApi | null = null
+
+    // load card from database
     try {
-      await checkIfCardIsPaidAndCreateWithdrawId(card)
-    } catch (error: unknown) {
-      let code = ErrorCode.UnknownErrorWhileCheckingInvoiceStatus
-      let errorToLog = error
-      if (error instanceof ErrorWithCode) {
-        code = error.code
-        errorToLog = error.error
+      const cardRedis = await getCardByHash(req.params.cardHash)
+      if (cardRedis != null) {
+        card = cardApiFromCardRedis(cardRedis)
       }
-      console.error(code, errorToLog)
-      res.status(500).json({
-        status: 'error',
-        reason: 'Unable to check invoice status at lnbits.',
-        code,
-      })
+    } catch (error: unknown) {
+      console.error(ErrorCode.UnknownDatabaseError, error)
+      res.status(500).json(toErrorResponse({
+        message: 'Unknown database error.',
+        code: ErrorCode.UnknownDatabaseError,
+      }))
+      next()
       return
     }
-  }
-  if (card.lnbitsWithdrawId == null) {
+    if (card == null) {
+      res.status(404).json(toErrorResponse({
+        message: 'Card has not been funded yet. Scan the QR code with your QR code scanner and open the URL in your browser to fund it.',
+        code: ErrorCode.CardByHashNotFound,
+      }))
+      next()
+      return
+    }
+
+    // check if invoice is already paid and get withdrawId
+    if (card.lnbitsWithdrawId == null) {
+      try {
+        await checkIfCardIsPaidAndCreateWithdrawId(card)
+      } catch (error: unknown) {
+        let code = ErrorCode.UnknownErrorWhileCheckingInvoiceStatus
+        let errorToLog = error
+        if (error instanceof ErrorWithCode) {
+          code = error.code
+          errorToLog = error.error
+        }
+        console.error(code, errorToLog)
+        res.status(500).json(toErrorResponse({
+          message: 'Unable to check invoice status at lnbits.',
+          code,
+        }))
+        next()
+        return
+      }
+    }
+    if (card.lnbitsWithdrawId == null && !card.isLockedByBulkWithdraw) {
+      res.json({
+        status: 'success',
+        data: card,
+      })
+      next()
+      return
+    }
+
+    // check if card is already used
+    if (card.used == null) {
+      try {
+        await checkIfCardIsUsed(card)
+      } catch (error: unknown) {
+        let code = ErrorCode.UnknownErrorWhileCheckingWithdrawStatus
+        let errorToLog = error
+        if (error instanceof ErrorWithCode) {
+          code = error.code
+          errorToLog = error.error
+        }
+        console.error(code, errorToLog)
+        res.status(500).json(toErrorResponse({
+          message: 'Unable to check withdraw status at lnbits.',
+          code,
+        }))
+        next()
+        return
+      }
+    }
+
     res.json({
       status: 'success',
       data: card,
     })
-    return
+    next()
   }
 
-  // check if card is already used
-  if (card.used == null) {
-    try {
-      await checkIfCardIsUsed(card)
-    } catch (error: unknown) {
-      let code = ErrorCode.UnknownErrorWhileCheckingWithdrawStatus
-      let errorToLog = error
-      if (error instanceof ErrorWithCode) {
-        code = error.code
-        errorToLog = error.error
-      }
-      console.error(code, errorToLog)
-      res.status(500).json({
-        status: 'error',
-        reason: 'Unable to check withdraw status at lnbits.',
-        code,
-      })
-      return
-    }
-  }
+  router.get('/')
 
-  // if card is not used and origin is the landing page mark the card as viewed
-  if (
-    card.used == null
-    && card.landingPageViewed == null
-    && req.query.origin === 'landing'
-  ) {
-    card.landingPageViewed = Math.round(+ new Date() / 1000)
-    try {
-      await updateCard(card)
-    } catch (error) {
-      console.error(ErrorCode.UnknownDatabaseError, error)
-    }
-  }
+  router.get(
+    '/:cardHash',
+    lockCardMiddleware(toErrorResponse, cardLockManager),
+    routeHandler,
+    releaseCardMiddleware,
+    emitCardUpdateForSingleCard(applicationEventEmitter),
+  )
 
-  res.json({
-    status: 'success',
-    data: card,
-  })
-})
-
-export default router
+  return router
+}

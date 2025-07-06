@@ -1,312 +1,456 @@
 <template>
-  <div class="flex flex-col flex-1 mx-auto w-full max-w-md">
-    <div
-      v-if="initializing"
-      class="flex justify-center flex-1 mt-8 px-4"
-    >
-      <AnimatedLoadingWheel />
-    </div>
-    <div
-      v-else-if="setFunding"
-      class="flex-1 mt-8 px-4"
-    >
-      <HeadlineDefault
-        level="h1"
-        class="mt-10"
+  <TheLayout login-banner>
+    <CenterContainer>
+      <BackLinkDeprecated />
+      <div
+        v-if="initializing"
+        class="flex justify-center flex-1 mt-8"
       >
-        {{ t('funding.headlineSetFunding') }}
-      </HeadlineDefault>
-      <p>
-        {{ t('funding.textSetFunding') }}
-      </p>
-    </div>
-    <div
-      v-else
-      class="flex-1 mt-8 px-4"
-    >
-      <HeadlineDefault
-        level="h1"
-        class="mt-10"
-      >
-        {{
-          usedDate != null
-            ? t('funding.headlineUsed')
-            : funded
-              ? t('funding.headlineFunded')
-              : t('funding.headline')
-        }}
-      </HeadlineDefault>
-      <ParagraphDefault
-        v-if="invoice == null && !shared && !lnurlp"
-        class="mb-8"
-      >
-        {{ t('funding.text') }}
-      </ParagraphDefault>
-      <div v-if="invoice != null">
-        <ParagraphDefault>
-          <I18nT
-            v-if="funded || usedDate != null"
-            :keypath="usedDate != null ? 'funding.textUsed' : 'funding.textFunded'"
-          >
-            <template #amountAndUnit>
-              <strong v-if="invoiceAmount != null" class="inline-block">
-                {{ t('funding.amountAndUnit', { amount: formatNumber(invoiceAmount / (100 * 1000 * 1000), 8, 8)}) }}
-              </strong>
-            </template>
-          </I18nT>
-          <I18nT v-else keypath="funding.invoiceText">
-            <template #amount>
-              <strong>{{ invoiceAmount }}</strong>
-            </template>
-          </I18nT>
-        </ParagraphDefault>
-        <LightningQrCode
-          :value="invoice"
-          :success="funded"
-          :error="invoiceExpired ? t('funding.invoiceExpired') : undefined"
-        />
-        <p v-if="invoiceExpired" class="mb-4">
-          {{ t('funding.invoiceExpired') }}
-        </p>
-        <div class="flex justify-center">
-          <ButtonWithTooltip
-            type="submit"
-            variant="outline"
-            :disabled="funded"
-            :tooltip="funded ? t('funding.resetDisabledTooltip') : undefined"
-            @click="resetInvoice"
-          >
-            {{ t('funding.resetInvoice') }} 
-          </ButtonWithTooltip>
-        </div>
-      </div>
-      <div v-else-if="shared">
-        <ParagraphDefault class="mb-8">
-          <I18nT keypath="funding.shared.text" scope="global">
-            <template #buttonFinish>
-              "{{ t('funding.shared.buttonFinish') }}"
-            </template>
-          </I18nT>
-        </ParagraphDefault>
-        <div class="mb-12">
-          <LightningQrCode
-            :value="lnurl"
-            :success="funded"
-            :error="lnurlpExpired ? (amount > 0 ? t('funding.lnurlpFundedExpired') : t('funding.lnurlpExpired')) : undefined"
-          />
-          <p v-if="lnurlpExpired" class="mb-4">
-            {{ amount > 0 ? t('funding.lnurlpFundedExpired') : t('funding.lnurlpExpired') }}
-          </p>
-        </div>
-        <ParagraphDefault v-if="funded">
-          <I18nT :keypath="usedDate != null ? 'funding.textUsed' : 'funding.textFunded'">
-            <template #amountAndUnit>
-              <strong class="inline-block">
-                {{ t('funding.amountAndUnit', { amount: formatNumber(amount / (100 * 1000 * 1000), 8, 8)}) }}
-              </strong>
-            </template>
-          </I18nT>
-        </ParagraphDefault>
-        <ParagraphDefault v-else-if="amount === 0">
-          {{ t('funding.shared.textEmpty') }} 
-        </ParagraphDefault>
-        <ParagraphDefault v-else>
-          <I18nT keypath="funding.shared.textPartiallyFunded">
-            <template #amountAndUnit>
-              <strong class="inline-block">
-                {{ t('funding.amountAndUnit', { amount: formatNumber(amount / (100 * 1000 * 1000), 8, 8)}) }}
-              </strong>
-            </template>
-          </I18nT>
-        </ParagraphDefault>
-        <div v-if="!funded">
-          <label class="block mb-2">
-            <input
-              v-model="text"
-              type="text"
-              class="w-full border my-1 px-3 py-2 focus:outline-none"
-              :disabled="creatingInvoice"
-              @input="updateText"
-            >
-            <small class="block">({{ t('funding.form.textHint') }})</small>
-          </label>
-          <label class="block mb-2">
-            <input
-              v-model="note"
-              type="text"
-              class="w-full border my-1 px-3 py-2 focus:outline-none"
-              :placeholder="t('funding.form.notePlaceholder')"
-              :disabled="creatingInvoice"
-              @input="updateNote"
-            >
-            <small class="block">({{ t('funding.form.noteHint') }})</small>
-          </label>
-        </div>
-        <div
-          class="flex flex-col items-center mt-4"
-        >
-          <ButtonWithTooltip
-            variant="outline"
-            :disabled="amount > 0 || finishingShared || funded"
-            :tooltip="amount > 0 ? t('funding.resetDisabledTooltip') : undefined"
-            @click="resetInvoice"
-          >
-            {{ t('funding.resetInvoice') }} 
-          </ButtonWithTooltip>
-          <ButtonWithTooltip
-            type="submit"
-            :disabled="amount === 0 || finishingShared || funded"
-            :tooltip="amount === 0 ? t('funding.shared.finishDisabledTooltip') : undefined"
-            @click="finishShared"
-          >
-            {{ t('funding.shared.buttonFinish') }} 
-          </ButtonWithTooltip>
-        </div>
-      </div>
-      <div v-else-if="lnurlp">
-        <ParagraphDefault v-if="funded">
-          <I18nT :keypath="usedDate != null ? 'funding.textUsed' : 'funding.textFunded'">
-            <template #amountAndUnit>
-              <strong class="inline-block">
-                {{ t('funding.amountAndUnit', { amount: formatNumber(amount / (100 * 1000 * 1000), 8, 8)}) }}
-              </strong>
-            </template>
-          </I18nT>
-        </ParagraphDefault>
-        <ParagraphDefault v-else>
-          <I18nT keypath="funding.lnurlp.text" scope="global">
-            <template #buttonOpenInWallet>
-              "{{ t('lightningQrCode.buttonOpenInWallet') }}"
-            </template>
-          </I18nT>
-        </ParagraphDefault>
-        <LightningQrCode
-          :value="lnurl"
-          :success="funded"
-          :error="lnurlpExpired ? t('funding.lnurlpExpired') : undefined"
-        />
-        <p v-if="lnurlpExpired" class="mb-4">
-          {{ t('funding.lnurlpExpired') }}
-        </p>
-        <div class="mb-4">
-          <label class="block mb-2">
-            <input
-              v-model="text"
-              type="text"
-              class="w-full border my-1 px-3 py-2 focus:outline-none"
-              :disabled="funded"
-              @input="updateText"
-            >
-            <small class="block">({{ t('funding.form.textHint') }})</small>
-          </label>
-          <label class="block mb-2">
-            <input
-              v-model="note"
-              type="text"
-              class="w-full border my-1 px-3 py-2 focus:outline-none"
-              :placeholder="t('funding.form.notePlaceholder')"
-              :disabled="funded"
-              @input="updateNote"
-            >
-            <small class="block">({{ t('funding.form.noteHint') }})</small>
-          </label>
-        </div>
-        <div class="flex justify-center">
-          <ButtonWithTooltip
-            variant="outline"
-            :disabled="funded"
-            :tooltip="funded ? t('funding.resetDisabledTooltip') : undefined"
-            @click="resetInvoice"
-          >
-            {{ t('funding.resetInvoice') }} 
-          </ButtonWithTooltip>
-        </div>
-      </div>
-      <div v-else>
-        <form @submit.prevent="createInvoice">
-          <label class="block mb-2">
-            <SatsAmountSelector
-              :amount-sats="amount"
-              :rate-btc-eur="rateBtcEur"
-              :min="210"
-              :disabled="creatingInvoice"
-              @update="amount = $event"
-            />
-          </label>
-          <label class="block mb-2">
-            <input
-              v-model="text"
-              type="text"
-              class="w-full border my-1 px-3 py-2 focus:outline-none"
-              :disabled="creatingInvoice"
-            >
-            <small class="block">({{ t('funding.form.textHint') }})</small>
-          </label>
-          <label class="block mb-2">
-            <input
-              v-model="note"
-              type="text"
-              class="w-full border my-1 px-3 py-2 focus:outline-none"
-              :placeholder="t('funding.form.notePlaceholder')"
-              :disabled="creatingInvoice"
-            >
-            <small class="block">({{ t('funding.form.noteHint') }})</small>
-          </label>
-          <div class="flex flex-col items-center mt-4">
-            <ButtonDefault
-              type="submit"
-              :disabled="creatingInvoice"
-            >
-              {{ t('funding.form.button') }}
-            </ButtonDefault>
-          </div>
-        </form>
-      </div>
-      <div v-if="userErrorMessage != null">
-        <ParagraphDefault class="text-red-500" dir="ltr">
-          {{ userErrorMessage }}
-        </ParagraphDefault>
+        <IconAnimatedLoadingWheelDeprecated class="my-20 w-10 h-10" />
       </div>
       <div
-        v-if="funded"
-        class="mt-24"
+        v-else-if="setFunding"
+        class="flex-1 mt-8"
+        data-test="funding-set"
       >
-        <CardStatus
-          :status="cardStatus"
-          :funded-date="cardFundedDate"
-          :used-date="usedDate"
-          :shared="shared"
-          :amount="invoiceAmount || amount || undefined"
-          :note="note || undefined"
-          :viewed="viewed"
-          :url="previewPageUrl"
-        />
+        <HeadlineDefault
+          level="h1"
+          class="mt-10 text-center"
+        >
+          {{ t('funding.headlineSetFunding') }}
+        </HeadlineDefault>
+        <p>
+          {{ t('funding.textSetFunding') }}
+        </p>
       </div>
-    </div>
-    <LinkDefault
-      v-if="!initializing && invoice == null && !shared && !funded && !setFunding"
-      class="mt-12 px-4"
-      :disabled="creatingInvoice"
-      @click.prevent="makeShared"
-    >
-      {{ t('funding.shared.buttonMakeShared') }} 
-    </LinkDefault>
-  </div>
+      <div
+        v-else
+        class="flex-1 mt-8"
+      >
+        <HeadlineDefault
+          level="h1"
+          class="mt-10 text-center"
+        >
+          {{
+            usedDate != null
+              ? t('funding.headlineUsed')
+              : funded
+                ? t('funding.headlineFunded')
+                : t('funding.headline')
+          }}
+        </HeadlineDefault>
+        <ParagraphDefault
+          v-if="invoice == null && !shared && !lnurlp"
+          class="mb-8"
+        >
+          {{ t('funding.text') }}
+        </ParagraphDefault>
+        <div v-if="invoice != null" data-test="funding-invoice">
+          <ParagraphDefault>
+            <I18nT
+              v-if="funded || usedDate != null"
+              :keypath="usedDate != null ? 'funding.textUsed' : 'funding.textFunded'"
+            >
+              <template #amountAndUnit>
+                <strong v-if="invoiceAmount != null" class="inline-block">
+                  {{ t('funding.amountAndUnit', { amount: formatNumber(invoiceAmount / (100 * 1000 * 1000), 8, 8)}) }}
+                </strong>
+              </template>
+            </I18nT>
+          </ParagraphDefault>
+          <LightningQrCode
+            class="my-7"
+            :value="invoice"
+            :success="funded"
+            :error="invoiceExpired ? t('funding.invoiceExpired') : undefined"
+          >
+            <template #preQrCode>
+              <ParagraphDefault v-if="invoiceExpired" class="text-sm text-red">
+                {{ t('funding.invoiceExpired') }}
+              </ParagraphDefault>
+              <ParagraphDefault v-else class="text-sm">
+                {{ !funded ? $t('funding.payInvoice') : $t('funding.headlineFunded') }}
+              </ParagraphDefault>
+              <AmountDisplayFinalSum
+                :status="funded ? 'success' : invoiceExpired || userErrorMessage != null ? 'error' : 'pending'"
+                :amount-sats="invoiceAmount"
+                :rate-btc-fiat="rateBtcEur"
+              />
+              <div class="px-5">
+                <FundingDetailsItemAmountDisplay
+                  :amount-sats="invoiceAmountNet"
+                  :selected-currency="selectedCurrency"
+                  :rate-btc-fiat="rateBtcEur"
+                  :label="$t('funding.lnurlp.amountOnCard')"
+                />
+                <FundingDetailsItemAmountDisplay
+                  :amount-sats="invoiceFeeAmount"
+                  :selected-currency="selectedCurrency"
+                  :rate-btc-fiat="rateBtcEur"
+                  :label="$t('general.fee')"
+                >
+                  <template #label>
+                    {{ $t('general.fee') }}
+                    <FeeInfoIconWithTooltip
+                      class="ms-1"
+                      :minimum-card-amount="minimumCardAmount"
+                    />
+                  </template>
+                </FundingDetailsItemAmountDisplay>
+              </div>
+            </template>
+          </LightningQrCode>
+          <div class="flex justify-center">
+            <ButtonWithTooltip
+              type="submit"
+              variant="outline"
+              :disabled="funded"
+              :tooltip="funded ? t('funding.resetDisabledTooltip') : undefined"
+              @click="resetInvoice"
+            >
+              {{ t('funding.resetInvoice') }}
+            </ButtonWithTooltip>
+          </div>
+        </div>
+        <div v-else-if="shared" data-test="funding-shared">
+          <ParagraphDefault class="mb-8">
+            <I18nT keypath="funding.shared.text">
+              <template #buttonFinish>
+                "{{ t('funding.shared.buttonFinish') }}"
+              </template>
+            </I18nT>
+          </ParagraphDefault>
+          <div class="my-8 max-w-sm mx-auto">
+            <ParagraphDefault class="text-sm text-center">
+              {{ t('funding.shared.currentAmount') }}
+            </ParagraphDefault>
+            <AmountDisplayFinalSum
+              :status="funded ? 'success' : invoiceExpired || userErrorMessage != null ? 'error' : 'pending'"
+              :amount-sats="amount"
+              :rate-btc-fiat="rateBtcEur"
+            />
+          </div>
+          <CollapsibleElement
+            :title="$t('general.details')"
+            level="h4"
+            class="max-w-sm mx-auto"
+          >
+            <FundingDetailsItem
+              :primary-figure="String(sharedPaymentsCount)"
+              :label="$t('funding.shared.paymentsCount')"
+            />
+            <FundingDetailsItemAmountDisplay
+              :amount-sats="amount + (lnurlpFeeAmount ?? 0)"
+              :selected-currency="selectedCurrency"
+              :rate-btc-fiat="rateBtcEur"
+              :label="$t('funding.shared.fundedAmount')"
+            />
+            <FundingDetailsItemAmountDisplay
+              :amount-sats="lnurlpFeeAmount ?? 0"
+              :selected-currency="selectedCurrency"
+              :rate-btc-fiat="rateBtcEur"
+            >
+              <template #label>
+                {{ $t('general.fee') }}
+                <FeeInfoIconWithTooltip
+                  class="ms-1"
+                  :minimum-card-amount="minimumCardAmount"
+                  is-shared-funding
+                />
+              </template>
+            </FundingDetailsItemAmountDisplay>
+            <FundingDetailsItemAmountDisplay
+              :amount-sats="amount"
+              :selected-currency="selectedCurrency"
+              :rate-btc-fiat="rateBtcEur"
+              :label="$t('funding.shared.amountOnCard')"
+              strong
+            />
+          </CollapsibleElement>
+          <div class="mb-12">
+            <LightningQrCode
+              class="my-7"
+              :value="lnurl"
+              :success="funded"
+              :error="lnurlpExpired ? (amount > 0 ? t('funding.lnurlpFundedExpired') : t('funding.lnurlpExpired')) : undefined"
+            />
+            <p v-if="lnurlpExpired" class="mb-4">
+              {{ amount > 0 ? t('funding.lnurlpFundedExpired') : t('funding.lnurlpExpired') }}
+            </p>
+          </div>
+          <div v-if="!funded" class="mb-4 max-w-sm mx-auto px-5">
+            <TextField
+              v-model="text"
+              :label="$t('funding.form.textPlaceholder')"
+              :placeholder="$t('funding.form.textPlaceholder')"
+              class="w-full my-4"
+              fiat-currency="EUR"
+              :disabled="creatingInvoice"
+              @update:model-value="updateText"
+            />
+            <TextField
+              v-model="note"
+              :label="$t('cards.status.labelNote')"
+              :placeholder="$t('setFunding.form.notePlaceholder')"
+              class="w-full my-4"
+              :disabled="creatingInvoice"
+              @update:model-value="updateNote"
+            />
+            <ParagraphDefault v-if="funded" class="text-sm">
+              <I18nT :keypath="usedDate != null ? 'funding.textUsed' : 'funding.textFunded'">
+                <template #amountAndUnit>
+                  <strong class="inline-block">
+                    {{ t('funding.amountAndUnit', { amount: formatNumber(amount / (100 * 1000 * 1000), 8, 8)}) }}
+                  </strong>
+                </template>
+              </I18nT>
+            </ParagraphDefault>
+            <ParagraphDefault v-else-if="amount === 0" class="text-sm">
+              {{ t('funding.shared.textEmpty') }}
+            </ParagraphDefault>
+            <ParagraphDefault v-else class="text-sm">
+              <I18nT keypath="funding.shared.textPartiallyFunded">
+                <template #amountAndUnit>
+                  <strong class="inline-block">
+                    {{ t('funding.amountAndUnit', { amount: formatNumber(amount / (100 * 1000 * 1000), 8, 8)}) }}
+                  </strong>
+                </template>
+              </I18nT>
+            </ParagraphDefault>
+            <ButtonContainer>
+              <ButtonWithTooltip
+                type="submit"
+                :disabled="amount === 0 || finishingShared || funded"
+                :tooltip="amount === 0 ? t('funding.shared.finishDisabledTooltip') : undefined"
+                @click="finishShared"
+              >
+                {{ t('funding.shared.buttonFinish') }}
+              </ButtonWithTooltip>
+              <ButtonWithTooltip
+                variant="outline"
+                :disabled="amount > 0 || finishingShared || funded"
+                :tooltip="amount > 0 ? t('funding.resetDisabledTooltip') : undefined"
+                @click="resetInvoice"
+              >
+                {{ t('funding.resetInvoice') }}
+              </ButtonWithTooltip>
+            </ButtonContainer>
+          </div>
+        </div>
+        <div v-else-if="lnurlp" data-test="funding-lnurlp">
+          <ParagraphDefault v-if="funded">
+            <I18nT :keypath="usedDate != null ? 'funding.textUsed' : 'funding.textFunded'">
+              <template #amountAndUnit>
+                <strong class="inline-block">
+                  {{ t('funding.amountAndUnit', { amount: formatNumber(amount / (100 * 1000 * 1000), 8, 8)}) }}
+                </strong>
+              </template>
+            </I18nT>
+          </ParagraphDefault>
+          <ParagraphDefault v-else>
+            <I18nT keypath="funding.lnurlp.text">
+              <template #buttonOpenInWallet>
+                "{{ t('lightningQrCode.buttonOpenInWallet') }}"
+              </template>
+            </I18nT>
+          </ParagraphDefault>
+          <template v-if="funded">
+            <div class="my-8 max-w-sm mx-auto">
+              <ParagraphDefault class="text-sm text-center">
+                {{ t('funding.lnurlp.currentAmount') }}
+              </ParagraphDefault>
+              <AmountDisplayFinalSum
+                :status="funded ? 'success' : invoiceExpired || userErrorMessage != null ? 'error' : 'pending'"
+                :amount-sats="amount"
+                :rate-btc-fiat="rateBtcEur"
+              />
+            </div>
+            <CollapsibleElement
+              :title="$t('general.details')"
+              level="h4"
+              class="max-w-sm mx-auto"
+            >
+              <FundingDetailsItemAmountDisplay
+                :amount-sats="amount + (lnurlpFeeAmount ?? 0)"
+                :selected-currency="selectedCurrency"
+                :rate-btc-fiat="rateBtcEur"
+                :label="$t('funding.lnurlp.fundedAmount')"
+              />
+              <FundingDetailsItemAmountDisplay
+                :amount-sats="lnurlpFeeAmount"
+                :selected-currency="selectedCurrency"
+                :rate-btc-fiat="rateBtcEur"
+              >
+                <template #label>
+                  {{ $t('general.fee') }}
+                  <FeeInfoIconWithTooltip
+                    class="ms-1"
+                    :minimum-card-amount="minimumCardAmount"
+                  />
+                </template>
+              </FundingDetailsItemAmountDisplay>
+              <FundingDetailsItemAmountDisplay
+                :amount-sats="amount"
+                :selected-currency="selectedCurrency"
+                :rate-btc-fiat="rateBtcEur"
+                :label="$t('funding.lnurlp.amountOnCard')"
+                strong
+              />
+            </CollapsibleElement>
+          </template>
+          <LightningQrCode
+            class="my-7"
+            :value="lnurl"
+            :success="funded"
+            :error="lnurlpExpired ? t('funding.lnurlpExpired') : undefined"
+          />
+          <p v-if="lnurlpExpired" class="mb-4">
+            {{ t('funding.lnurlpExpired') }}
+          </p>
+          <div class="mb-4 max-w-sm mx-auto px-5">
+            <TextField
+              v-model="text"
+              :label="$t('funding.form.textPlaceholder')"
+              :placeholder="$t('funding.form.textPlaceholder')"
+              class="w-full my-4"
+              fiat-currency="EUR"
+              :disabled="creatingInvoice || funded"
+              @update:model-value="updateText"
+            />
+            <TextField
+              v-model="note"
+              :label="$t('cards.status.labelNote')"
+              :placeholder="$t('setFunding.form.notePlaceholder')"
+              class="w-full my-4"
+              :disabled="creatingInvoice || funded"
+              @update:model-value="updateNote"
+            />
+          </div>
+          <div class="flex justify-center">
+            <ButtonWithTooltip
+              variant="outline"
+              :disabled="funded"
+              :tooltip="funded ? t('funding.resetDisabledTooltip') : undefined"
+              @click="resetInvoice"
+            >
+              {{ t('funding.resetInvoice') }}
+            </ButtonWithTooltip>
+          </div>
+        </div>
+        <div
+          v-else
+          class="w-full max-w-sm mx-auto rounded-default shadow-default p-5 bg-white"
+        >
+          <form @submit.prevent="createInvoice">
+            <SatsAmountSelector
+              :amount-sats="amount"
+              :selected-currency="selectedCurrency"
+              :rate-btc-fiat="rateBtcEur"
+              :min="minimumCardAmount"
+              :max="maximumCardAmount"
+              :disabled="creatingInvoice"
+              fiat-currency="EUR"
+              class="mt-4 mb-2"
+              @update:amount-sats="amount = $event"
+              @update:selected-currency="selectedCurrency = $event"
+            />
+            <FundingDetailsItemAmountDisplay
+              :amount-sats="fee != null ? calculateFeeForCard(amount) : undefined"
+              :selected-currency="selectedCurrency"
+              :rate-btc-fiat="rateBtcEur"
+            >
+              <template #label>
+                {{ $t('general.fee') }}
+                <FeeInfoIconWithTooltip
+                  class="ms-1"
+                  :minimum-card-amount="minimumCardAmount"
+                />
+              </template>
+            </FundingDetailsItemAmountDisplay>
+            <FundingDetailsItemAmountDisplay
+              strong
+              :amount-sats="amount + (fee != null ? calculateFeeForCard(amount) : 0)"
+              :selected-currency="selectedCurrency"
+              :rate-btc-fiat="rateBtcEur"
+              :label="$t('general.totalIncludingFee')"
+            />
+            <hr class="my-8">
+            <TextField
+              v-model="text"
+              :label="$t('funding.form.textPlaceholder')"
+              :placeholder="$t('funding.form.textPlaceholder')"
+              class="w-full my-4"
+              fiat-currency="EUR"
+              :disabled="creatingInvoice"
+            />
+            <TextField
+              v-model="note"
+              :label="$t('cards.status.labelNote')"
+              :placeholder="$t('setFunding.form.notePlaceholder')"
+              class="w-full my-4"
+              :disabled="creatingInvoice"
+            />
+            <div class="flex flex-col items-center mt-4">
+              <ButtonDefault
+                type="submit"
+                :disabled="creatingInvoice"
+              >
+                {{ t('funding.form.button') }}
+              </ButtonDefault>
+            </div>
+          </form>
+        </div>
+        <div v-if="userErrorMessage != null" class="max-w-sm mx-auto mt-8">
+          <ParagraphDefault class="text-red-500" dir="ltr">
+            {{ userErrorMessage }}
+          </ParagraphDefault>
+        </div>
+        <div
+          v-if="funded"
+          class="mt-24"
+        >
+          <CardStatus
+            :status="cardStatus"
+            :funded-date="cardFundedDate"
+            :used-date="usedDate"
+            :shared="shared"
+            :amount="invoiceAmount || amount || undefined"
+            :note="note || undefined"
+            :viewed="viewed"
+            :url="landingPageUrl"
+          />
+        </div>
+      </div>
+      <div class="text-center">
+        <LinkDefault
+          v-if="!initializing && invoice == null && !shared && !funded && !setFunding"
+          class="mt-12"
+          :disabled="creatingInvoice"
+          @click.prevent="makeShared"
+        >
+          {{ t('funding.shared.buttonMakeShared') }}
+        </LinkDefault>
+      </div>
+    </CenterContainer>
+  </TheLayout>
 </template>
 
 <script setup lang="ts">
 import axios from 'axios'
 import debounce from 'lodash.debounce'
-import { computed, onBeforeMount, ref } from 'vue'
+import { computed, onBeforeMount, onUnmounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { useRoute, useRouter } from 'vue-router'
+import { useRoute } from 'vue-router'
 
-import I18nT from '@/modules/I18nT'
+import LNURL from '@shared/modules/LNURL/LNURL'
+import { FEE_PERCENTAGE } from '@shared/constants'
+import { calculateFeeForCard } from '@shared/modules/feeCalculation'
+
 import HeadlineDefault from '@/components/typography/HeadlineDefault.vue'
 import LinkDefault from '@/components/typography/LinkDefault.vue'
 import ParagraphDefault from '@/components/typography/ParagraphDefault.vue'
-import AnimatedLoadingWheel from '@/components/AnimatedLoadingWheel.vue'
-import ButtonDefault from '@/components/ButtonDefault.vue'
+import IconAnimatedLoadingWheelDeprecated from '@/components/icons/IconAnimatedLoadingWheelDeprecated.vue'
+import ButtonDefault from '@/components/buttons/ButtonDefault.vue'
 import ButtonWithTooltip from '@/components/ButtonWithTooltip.vue'
 import LightningQrCode from '@/components/LightningQrCode.vue'
 import SatsAmountSelector from '@/components/SatsAmountSelector.vue'
@@ -314,16 +458,34 @@ import CardStatus from '@/components/CardStatus.vue'
 import formatNumber from '@/modules/formatNumber'
 import { loadCardStatus } from '@/modules/loadCardStatus'
 import { rateBtcEur } from '@/modules/rateBtcFiat'
+import useLandingPages from '@/modules/useLandingPages'
 import { BACKEND_API_ORIGIN } from '@/constants'
-import { encodeLnurl } from '@root/modules/lnurlHelpers'
+
+import TheLayout from '@/components/layout/TheLayout.vue'
+import CenterContainer from '@/components/layout/CenterContainer.vue'
+import BackLinkDeprecated from '@/components/BackLinkDeprecated.vue'
+import TextField from '@/components/forms/TextField.vue'
+import type { SelectedCurrency } from '@/modules/useAmountConversion'
+import FundingDetailsItemAmountDisplay from '@/components/FundingDetailsItemAmountDisplay.vue'
+import AmountDisplayFinalSum from '@/components/AmountDisplayFinalSum.vue'
+import ButtonContainer from '@/components/buttons/ButtonContainer.vue'
+import CollapsibleElement from '@/components/CollapsibleElement.vue'
+import FeeInfoIconWithTooltip from '@/components/FeeInfoIconWithTooltip.vue'
+import FundingDetailsItem from '@/components/FundingDetailsItem.vue'
+
 
 const { t } = useI18n()
 const route = useRoute()
-const router = useRouter()
 
+const defaultCardAmount = 2100
+const minimumCardAmount = 210
+const maximumCardAmount = 2100000
+
+const fee = ref<number | undefined>(FEE_PERCENTAGE)
+const selectedCurrency = ref<SelectedCurrency>('sats')
 const initializing = ref(true)
 const lnurlp = ref(false)
-const amount = ref(2100)
+const amount = ref(defaultCardAmount)
 const text = ref(t('cards.settings.defaults.invoiceText'))
 const textIsDirty = ref(false)
 const note = ref<string>()
@@ -331,69 +493,80 @@ const noteIsDirty = ref(false)
 const userErrorMessage = ref<string>()
 const invoice = ref<string>()
 const invoiceAmount = ref<number>()
+const invoiceAmountNet = ref<number>()
+const invoiceFeeAmount = ref<number>()
 const invoiceExpired = ref(false)
 const funded = ref(false)
 const creatingInvoice = ref(false)
 const shared = ref(false)
 const finishingShared = ref(false)
+const sharedPaymentsCount = ref(0)
+const lnurlpFeeAmount = ref<number>()
 const lnurlpExpired = ref(false)
 const cardStatus = ref<string | undefined>()
 const cardFundedDate = ref<number | undefined>()
 const usedDate = ref<number | undefined>()
 const viewed = ref(false)
 const setFunding = ref(false)
+const pollingInterval = ref<NodeJS.Timeout>()
 
-const lnurl = computed(() => encodeLnurl(`${BACKEND_API_ORIGIN}/api/lnurl/${route.params.cardHash}`))
+const lnurl = computed(() => LNURL.encode(`${BACKEND_API_ORIGIN}/api/lnurl/${route.params.cardHash}`))
 
 const loadLnurlData = async () => {
-  const { status, fundedDate, card } = await loadCardStatus(String(route.params.cardHash), 'funding')
+  const { status, fundedDate, card } = await loadCardStatus(String(route.params.cardHash))
 
   cardStatus.value = status || undefined
   cardFundedDate.value = fundedDate || undefined
   usedDate.value = card?.used || undefined
-  if (card?.lnurlp != null) {
-    lnurlp.value = true
-  }
-  if (card?.lnurlp?.shared) {
-    shared.value = true
-  }
-  if (card?.lnurlp != null) {
-    amount.value = typeof card.lnurlp.amount === 'number' ? card.lnurlp.amount : 0
-  }
-  if (card?.invoice?.amount != null) {
-    invoiceAmount.value = card.invoice.amount
-  }
-  if (card?.invoice?.payment_request != null) {
-    invoice.value = card.invoice.payment_request
-  }
-  if (card?.invoice?.expired === true) {
-    invoiceExpired.value = true
-  }
-  if (card?.lnurlp?.expired === true) {
-    lnurlpExpired.value = true
-  }
-  if (card?.text != null && !textIsDirty.value) {
+  lnurlp.value = card?.lnurlp != null
+  shared.value = !!card?.lnurlp?.shared
+  invoiceAmountNet.value = card?.invoice?.amount != null ? card.invoice.amount : undefined
+  invoiceFeeAmount.value = card?.invoice?.feeAmount != null ? card.invoice.feeAmount : 0
+  invoiceAmount.value = invoiceAmountNet.value != null ? invoiceAmountNet.value + invoiceFeeAmount.value : undefined
+  invoice.value = card?.invoice?.payment_request != null ? card.invoice.payment_request : undefined
+  invoiceExpired.value = !!card?.invoice?.expired
+  lnurlpExpired.value = !!card?.lnurlp?.expired
+  if (!!card?.text && !textIsDirty.value) {
     text.value = card.text
   }
-  if (card?.note != null && !noteIsDirty.value) {
+  if (!!card?.note && !noteIsDirty.value) {
     note.value = card.note
   }
-  if (status === 'funded' || status === 'used') {
-    funded.value = true
+  funded.value = status === 'funded' || status === 'used'
+  viewed.value = card?.landingPageViewed != null
+  setFunding.value = card?.setFunding != null
+  if (typeof card?.lnurlp?.amount === 'number') {
+    amount.value = card.lnurlp.amount
+    lnurlpFeeAmount.value = card.lnurlp.feeAmount ?? 0
+    sharedPaymentsCount.value = card.lnurlp.payment_hash?.length ?? 0
+  } else if (card?.lnurlp?.shared) {
+    amount.value = 0
+  } else if (typeof card?.setFunding?.amount === 'number') {
+    amount.value = card.setFunding.amount
   }
-  if (card?.landingPageViewed != null) {
-    viewed.value = true
-  }
-  if (card?.setFunding != null) {
-    setFunding.value = true
-    amount.value = typeof card.setFunding.amount === 'number' ? card.setFunding.amount : 0
-  }
-  initializing.value = false
 
-  setTimeout(loadLnurlData, 10 * 1000)
+  initializing.value = false
 }
 
-onBeforeMount(loadLnurlData)
+const onVisibilityChange = () => {
+  if (document.visibilityState !== 'visible') {
+    return
+  }
+  loadLnurlData()
+}
+
+onBeforeMount(() => {
+  loadLnurlData()
+  pollingInterval.value = setInterval(loadLnurlData, 10000)
+  document.addEventListener('visibilitychange', onVisibilityChange)
+})
+
+onUnmounted(() => {
+  if (pollingInterval.value != null) {
+    clearInterval(pollingInterval.value)
+  }
+  document.removeEventListener('visibilitychange', onVisibilityChange)
+})
 
 const createInvoice = async () => {
   creatingInvoice.value = true
@@ -413,8 +586,9 @@ const createInvoice = async () => {
   } catch(error) {
     console.error(error)
   }
+  await loadLnurlData()
   creatingInvoice.value = false
-  
+
   if (invoice.value == null) {
     userErrorMessage.value = 'Unable to create funding invoice. Please try again later.'
   }
@@ -422,13 +596,12 @@ const createInvoice = async () => {
 
 const resetInvoice = async () => {
   try {
-    const response = await axios.delete(
-      `${BACKEND_API_ORIGIN}/api/invoice/delete/${route.params.cardHash}`)
+    const response = await axios.delete(`${BACKEND_API_ORIGIN}/api/invoice/delete/${route.params.cardHash}`)
     if (response.data.status === 'success') {
       invoice.value = undefined
       shared.value = false
       funded.value = false
-      amount.value = 2100
+      amount.value = defaultCardAmount
       userErrorMessage.value = undefined
       creatingInvoice.value = false
       finishingShared.value = false
@@ -439,10 +612,12 @@ const resetInvoice = async () => {
       noteIsDirty.value = false
       lnurlp.value = false
       lnurlpExpired.value = false
+      sharedPaymentsCount.value = 0
+      lnurlpFeeAmount.value = undefined
     }
   } catch(error) {
     console.error(error)
-    userErrorMessage.value = 'Unable to reset Tip Card. Please try again later.'
+    userErrorMessage.value = 'Unable to reset TipCard. Please try again later.'
   }
 }
 
@@ -466,7 +641,7 @@ const makeShared = async () => {
     console.error(error)
   }
   if (shared.value !== true) {
-    userErrorMessage.value = 'Unable to make share funding.'
+    userErrorMessage.value = 'Unable to activate shared funding.'
   }
 
   creatingInvoice.value = false
@@ -527,11 +702,10 @@ const finishShared = async () => {
   }
 }
 
-const previewPageUrl = computed(() => {
-  return router.resolve({
-    name: 'preview',
-    params: { lang: route.params.lang },
-    query: { lightning: lnurl.value.toUpperCase() },
-  }).href
-})
+const { getLandingPageUrlWithCardHash } = useLandingPages()
+const landingPageUrl = computed(
+  () => typeof route.params.cardHash === 'string'
+    ? getLandingPageUrlWithCardHash(route.params.cardHash)
+    : '',
+)
 </script>
